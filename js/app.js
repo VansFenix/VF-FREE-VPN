@@ -470,7 +470,8 @@ function loadBotSettingsUI() {
 function saveBotSettings() {
     const token = document.getElementById('admin-bot-token').value.trim();
     const username = document.getElementById('admin-bot-username').value.trim().replace('@', '');
-    const proxy = document.getElementById('admin-bot-proxy').value.trim().replace(/\/+$/, '');
+    let proxy = document.getElementById('admin-bot-proxy').value.trim().replace(/\/+$/, '');
+    if (proxy && !proxy.startsWith('http')) proxy = 'https://' + proxy;
     localStorage.setItem('vf_bot_token', token);
     localStorage.setItem('vf_bot_username', username);
     localStorage.setItem('vf_bot_proxy', proxy);
@@ -528,7 +529,8 @@ function adminLogin() {
     btn.disabled = true;
     btn.textContent = '⏳ Проверка...';
 
-    fetch(TG_BOT_PROXY + '/admin/login', {
+    const apiUrl = TG_BOT_PROXY.startsWith('http') ? TG_BOT_PROXY : 'https://' + TG_BOT_PROXY;
+    fetch(apiUrl + '/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login, password })
@@ -610,7 +612,8 @@ function toggleBlockUser(username) {
 
 // ====== CHANNEL VERIFICATION ======
 function getBotApiBase() {
-    return TG_BOT_PROXY ? TG_BOT_PROXY : TG_BOT_API;
+    if (!TG_BOT_PROXY) return TG_BOT_API;
+    return TG_BOT_PROXY.startsWith('http') ? TG_BOT_PROXY : 'https://' + TG_BOT_PROXY;
 }
 
 function checkSubscription() {
