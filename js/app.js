@@ -6,9 +6,13 @@ const DAILY_BONUS_AMOUNT = 50;
 const TG_BOT_API = 'https://api.telegram.org/bot';
 const REFERRAL_BONUS = 50;
 
-let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || '';
-let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || '';
-let TG_BOT_PROXY = localStorage.getItem('vf_bot_proxy') || '';
+const TG_BOT_TOKEN_DEFAULT = '8834371476:AAEOAH98X0VESvgBpX9_oPCVzUXRRK_Ee6A';
+const TG_BOT_USERNAME_DEFAULT = 'WildVFrobot';
+const TG_BOT_PROXY_DEFAULT = 'https://shrill-bread-89de.nfajih.workers.dev';
+
+let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || TG_BOT_TOKEN_DEFAULT;
+let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || TG_BOT_USERNAME_DEFAULT;
+let TG_BOT_PROXY = localStorage.getItem('vf_bot_proxy') || TG_BOT_PROXY_DEFAULT;
 
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
 const VLESS_CONFIGS = {
