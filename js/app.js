@@ -1056,7 +1056,7 @@ function init() {
     document.getElementById('daily-btn').addEventListener('click', claimDaily);
 
     // Verify subscription
-    document.getElementById('verify-btn').addEventListener('click', verifySubscription);
+    document.getElementById('verify-btn').onclick = verifySubscription;
 
     // 3D Tilt effect on subscription cards
     document.querySelectorAll('.sub-card').forEach(card => {
