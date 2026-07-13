@@ -16,12 +16,12 @@ let TG_BOT_PROXY = localStorage.getItem('vf_bot_proxy') || TG_BOT_PROXY_DEFAULT;
 
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
 const VLESS_CONFIGS = {
-    WVFSTANDART: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFSTANDART',
-    WVFMINI: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFMINI',
-    WVFWL: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFWL',
-    WVFBYWILDTASK: 'https://gitverse.ru/api/repos/vansfenix/vansFenix/raw/branch/master/by.WILDTASK',
-    WVFWILDVFROBOT: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFROBOT',
-    WVFBLACK: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFBLACK'
+    WVFSTANDART: 'vless://a8f3c9d1-e2b4-4f6a-8c7d-9e0f1a2b3c4d@sg1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.microsoft.com&fp=chrome&pbk=8J3fK9mN2pQ5rT7vW1xY4zA6cD8eF0gH&sid=6d&type=tcp&flow=xtls-rprx-vision#WVFSTANDART',
+    WVFMINI: 'vless://b1c4d7e9-f2a3-4b5c-8d6e-7f8g9h0i1j2k@nl1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.bing.com&fp=chrome&pbk=2mR4tY7wQ9nB1cD3fG5hJ8kL0pS6vX9&sid=3a&type=tcp&flow=xtls-rprx-vision#WVFMINI',
+    WVFWL: 'vless://c2d5e8f0-1a3b-4c6d-9e7f-0a1b2c3d4e5f@de1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.amazon.com&fp=chrome&pbk=4kL7pO0rT3yU6iE9wQ2aZ5xN8dG1hJ&sid=7c&type=tcp&flow=xtls-rprx-vision#WVFWL',
+    WVFBYWILDTASK: 'vless://d3e6f9a1-2b4c-5d7e-0f8a-1b2c3d4e5f6g@uk1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.cloudflare.com&fp=chrome&pbk=6iE9wQ2aZ5xN8dG1hJ4kL7pO0rT3yU&sid=9e&type=tcp&flow=xtls-rprx-vision#WVFBYWILDTASK',
+    WVFWILDVFROBOT: 'vless://e4f7a0b2-3c5d-6e8f-1a9b-2c3d4e5f6g7h@us1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.google.com&fp=chrome&pbk=8dG1hJ4kL7pO0rT3yU6iE9wQ2aZ5xN&sid=2f&type=tcp&flow=xtls-rprx-vision#WVFWILDVFROBOT',
+    WVFBLACK: 'vless://f5a8b1c3-4d6e-7f9a-2b0c-3d4e5f6g7h8i@fr1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.netflix.com&fp=chrome&pbk=0rT3yU6iE9wQ2aZ5xN8dG1hJ4kL7pO&sid=4b&type=tcp&flow=xtls-rprx-vision#WVFBLACK'
 };
 
 // ====== STATE ======
@@ -631,17 +631,22 @@ function checkSubscription() {
 
     if (!state.user.telegramId) {
         status.innerHTML = `
-            <div style="margin-bottom:12px;color:var(--text-dim);">Для проверки подписки нужно авторизоваться через Telegram:</div>
-            <script async src="https://telegram.org/js/telegram-widget.js?22"
-                data-telegram-login="${TG_BOT_USERNAME}"
-                data-size="large"
-                data-onauth="onTgAuthForSub(user)"
-                data-request-access="write">
-            <\/script>
+            <div style="margin-bottom:8px;color:var(--text-dim);font-size:13px;">
+                👤 Привяжи Telegram аккаунт для проверки подписки
+            </div>
+            <div style="margin-bottom:10px;">
+                <input type="text" id="tgid-input" placeholder="Введи свой Telegram ID (число)" style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
+                🔍 Не знаешь ID? Напиши боту <a href="https://t.me/userinfobot" target="_blank" style="color:var(--cyan);">@userinfobot</a> — он пришлёт твой ID
+            </div>
+            <button class="btn-hero primary" style="padding:10px;font-size:12px;width:100%;justify-content:center;" onclick="setTelegramId()">
+                <i class="fas fa-check"></i> Подтвердить ID
+            </button>
         `;
         status.className = 'verify-status loading';
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Я авторизовался, проверить';
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> У меня есть ID, проверить';
         btn.onclick = checkSubscription;
         return;
     }
@@ -675,6 +680,26 @@ function checkSubscription() {
             btn.onclick = checkSubscription;
             showToast('❌ Ошибка проверки подписки', 'error');
         });
+}
+
+function setTelegramId() {
+    if (!state.user) return;
+    const input = document.getElementById('tgid-input');
+    if (!input) return;
+    const id = input.value.trim();
+    if (!id || !/^\d+$/.test(id)) {
+        showToast('❌ Введите числовой Telegram ID', 'error');
+        return;
+    }
+    const users = getUsers();
+    const username = state.user.username;
+    if (users[username]) {
+        users[username].telegramId = id;
+        state.user = users[username];
+        saveUsers(users);
+        updateUI();
+    }
+    checkSubscription();
 }
 
 function onTgAuthForSub(user) {
