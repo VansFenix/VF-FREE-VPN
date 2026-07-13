@@ -487,19 +487,12 @@ function openAdminPanel() {
     if (adminClickCount >= 5) {
         adminClickCount = 0;
         document.getElementById('admin-overlay').classList.remove('hidden');
+        document.getElementById('admin-login-area').classList.remove('hidden');
+        document.getElementById('admin-panel-area').classList.add('hidden');
+        document.getElementById('admin-login-error').textContent = '';
+        document.getElementById('admin-login').value = '';
+        document.getElementById('admin-password').value = '';
         loadBotSettingsUI();
-        const saved = localStorage.getItem('vf_admin_session');
-        if (saved === 'true') {
-            document.getElementById('admin-login-area').classList.add('hidden');
-            document.getElementById('admin-panel-area').classList.remove('hidden');
-            renderAdminUsers();
-        } else {
-            document.getElementById('admin-login-area').classList.remove('hidden');
-            document.getElementById('admin-panel-area').classList.add('hidden');
-            document.getElementById('admin-login-error').textContent = '';
-            document.getElementById('admin-login').value = '';
-            document.getElementById('admin-password').value = '';
-        }
     }
 }
 
@@ -508,7 +501,6 @@ function closeAdmin() {
 }
 
 function adminLogout() {
-    localStorage.removeItem('vf_admin_session');
     document.getElementById('admin-login-area').classList.remove('hidden');
     document.getElementById('admin-panel-area').classList.add('hidden');
     document.getElementById('admin-login-error').textContent = '';
@@ -527,23 +519,39 @@ function adminLogin() {
         return;
     }
 
-    const valid = [
-        { l: 'FS105iLDAX', p: '3.m9-uKsAcEi+tNJV,W\\[1&o' }
-    ];
-
-    for (const cred of valid) {
-        if (cred.l === login && cred.p === password) {
-            document.getElementById('admin-login-area').classList.add('hidden');
-            document.getElementById('admin-panel-area').classList.remove('hidden');
-            errorEl.textContent = '';
-            localStorage.setItem('vf_admin_session', 'true');
-            renderAdminUsers();
-            showToast('✅ Добро пожаловать в админ-панель', 'success');
-            return;
-        }
+    if (!TG_BOT_PROXY) {
+        errorEl.textContent = 'Сначала настройте Proxy URL в админ-панели';
+        return;
     }
 
-    errorEl.textContent = 'Неверный логин или пароль';
+    const btn = document.querySelector('#admin-login-area .btn-primary');
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверка...';
+
+    fetch(TG_BOT_PROXY + '/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password })
+    })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = 'Войти в админ-панель';
+            if (data.ok) {
+                document.getElementById('admin-login-area').classList.add('hidden');
+                document.getElementById('admin-panel-area').classList.remove('hidden');
+                errorEl.textContent = '';
+                renderAdminUsers();
+                showToast('✅ Добро пожаловать в админ-панель', 'success');
+            } else {
+                errorEl.textContent = 'Неверный логин или пароль';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.textContent = 'Войти в админ-панель';
+            errorEl.textContent = 'Ошибка подключения к серверу. Проверьте Proxy URL';
+        });
 }
 
 function renderAdminUsers() {
@@ -659,26 +667,32 @@ function checkSubscription() {
     const apiBase = getBotApiBase();
     const url = `${apiBase}/bot${TG_BOT_TOKEN}/getChatMember?chat_id=@${TG_CHANNEL}&user_id=${state.user.telegramId}`;
 
-    fetch(url)
+    function showError(msg) {
+        btn.disabled = false;
+        status.textContent = msg;
+        status.className = 'verify-status error';
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+        btn.onclick = checkSubscription;
+    }
+
+    fetch(url, { signal: AbortSignal.timeout(15000) })
         .then(r => r.json())
         .then(data => {
             btn.disabled = false;
             if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
                 confirmSub();
             } else {
-                status.textContent = '❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова';
-                status.className = 'verify-status error';
-                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
-                btn.onclick = checkSubscription;
+                showError('❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова');
             }
         })
-        .catch(() => {
-            btn.disabled = false;
-            status.textContent = '❌ Ошибка подключения к Telegram API. Проверьте Proxy URL и токен бота.';
-            status.className = 'verify-status error';
-            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
-            btn.onclick = checkSubscription;
-            showToast('❌ Ошибка проверки подписки', 'error');
+        .catch((err) => {
+            if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+                showError('❌ Тайм-аут подключения к Telegram API. Возможно сервер заблокирован в вашем регионе.');
+                showToast('❌ Тайм-аут. Попробуйте через VPN или смените Proxy URL', 'error');
+            } else {
+                showError('❌ Не удалось подключиться к Telegram API. Возможно Proxy URL (' + TG_BOT_PROXY + ') заблокирован в вашем регионе.');
+                showToast('❌ Ошибка подключения. Попробуйте через VPN или настройте свой домен для Worker', 'error');
+            }
         });
 }
 
