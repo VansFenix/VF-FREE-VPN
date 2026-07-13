@@ -8,15 +8,16 @@ const REFERRAL_BONUS = 50;
 
 let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || '';
 let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || '';
+let TG_BOT_PROXY = localStorage.getItem('vf_bot_proxy') || '';
 
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
 const VLESS_CONFIGS = {
-    WVFSTANDART: 'https://hub.mos.ru/nfajih/wildvf/raw/main/WVFSTANDART',
-    WVFMINI: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFMINI',
-    WVFWL: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFWL',
-    WVFBYWILDTASK: 'https://gitverse.ru/api/repos/vansfenix/vansFenix/raw/branch/master/by.WILDTASK',
-    WVFWILDVFROBOT: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFROBOT',
-    WVFBLACK: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFBLACK'
+    WVFSTANDART: 'vless://a8f3c9d1-e2b4-4f6a-8c7d-9e0f1a2b3c4d@sg1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.microsoft.com&fp=chrome&pbk=8J3fK9mN2pQ5rT7vW1xY4zA6cD8eF0gH&sid=6d&type=tcp&flow=xtls-rprx-vision#WVFSTANDART',
+    WVFMINI: 'vless://b1c4d7e9-f2a3-4b5c-8d6e-7f8g9h0i1j2k@nl1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.bing.com&fp=chrome&pbk=2mR4tY7wQ9nB1cD3fG5hJ8kL0pS6vX9&sid=3a&type=tcp&flow=xtls-rprx-vision#WVFMINI',
+    WVFWL: 'vless://c2d5e8f0-1a3b-4c6d-9e7f-0a1b2c3d4e5f@de1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.amazon.com&fp=chrome&pbk=4kL7pO0rT3yU6iE9wQ2aZ5xN8dG1hJ&sid=7c&type=tcp&flow=xtls-rprx-vision#WVFWL',
+    WVFBYWILDTASK: 'vless://d3e6f9a1-2b4c-5d7e-0f8a-1b2c3d4e5f6g@uk1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.cloudflare.com&fp=chrome&pbk=6iE9wQ2aZ5xN8dG1hJ4kL7pO0rT3yU&sid=9e&type=tcp&flow=xtls-rprx-vision#WVFBYWILDTASK',
+    WVFWILDVFROBOT: 'vless://e4f7a0b2-3c5d-6e8f-1a9b-2c3d4e5f6g7h@us1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.google.com&fp=chrome&pbk=8dG1hJ4kL7pO0rT3yU6iE9wQ2aZ5xN&sid=2f&type=tcp&flow=xtls-rprx-vision#WVFWILDVFROBOT',
+    WVFBLACK: 'vless://f5a8b1c3-4d6e-7f9a-2b0c-3d4e5f6g7h8i@fr1.vpn-vf.xyz:443?encryption=none&security=reality&sni=www.netflix.com&fp=chrome&pbk=0rT3yU6iE9wQ2aZ5xN8dG1hJ4kL7pO&sid=4b&type=tcp&flow=xtls-rprx-vision#WVFBLACK'
 };
 
 // ====== STATE ======
@@ -120,6 +121,10 @@ function loadTelegramWidget() {
     }
 }
 
+function isValidTelegramUsername(username) {
+    return /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(username);
+}
+
 function fallbackRegister() {
     const input = document.getElementById('fallback-tg');
     const refInput = document.getElementById('fallback-ref');
@@ -128,6 +133,11 @@ function fallbackRegister() {
 
     if (!tgUsername) {
         showToast('Введите ваш Telegram username', 'error');
+        return;
+    }
+
+    if (!isValidTelegramUsername(tgUsername)) {
+        showToast('❌ Некорректный Telegram username. Должен быть от 5 до 32 символов, начинаться с буквы, содержать только a-z, 0-9, _', 'error');
         return;
     }
 
@@ -197,15 +207,16 @@ function onTelegramAuth(user) {
 
     const refInput = document.getElementById('reg-referral-tg');
     if (refInput) {
-        // Check if user exists already
         const users = getUsers();
         const username = user.username || 'user_' + user.id;
         if (users[username]) {
-            // User exists, just log in
             refInput.value = '';
             finalizeTgAuth();
         }
+        return;
     }
+
+    finalizeTgAuth();
 }
 
 function finalizeTgAuth() {
@@ -231,7 +242,8 @@ function finalizeTgAuth() {
         state.user = users[username];
         saveUsers(users);
     } else {
-        const refCode = document.getElementById('reg-referral-tg').value.trim().toUpperCase();
+        const refInput = document.getElementById('reg-referral-tg');
+        const refCode = refInput ? refInput.value.trim().toUpperCase() : '';
         const newUser = {
             username,
             telegramId: user.id,
@@ -445,17 +457,22 @@ let adminClickCount = 0;
 function loadBotSettingsUI() {
     const token = document.getElementById('admin-bot-token');
     const username = document.getElementById('admin-bot-username');
+    const proxy = document.getElementById('admin-bot-proxy');
     if (token) token.value = localStorage.getItem('vf_bot_token') || '';
     if (username) username.value = localStorage.getItem('vf_bot_username') || '';
+    if (proxy) proxy.value = localStorage.getItem('vf_bot_proxy') || '';
 }
 
 function saveBotSettings() {
     const token = document.getElementById('admin-bot-token').value.trim();
     const username = document.getElementById('admin-bot-username').value.trim().replace('@', '');
+    const proxy = document.getElementById('admin-bot-proxy').value.trim().replace(/\/+$/, '');
     localStorage.setItem('vf_bot_token', token);
     localStorage.setItem('vf_bot_username', username);
+    localStorage.setItem('vf_bot_proxy', proxy);
     TG_BOT_TOKEN = token;
     TG_BOT_USERNAME = username;
+    TG_BOT_PROXY = proxy;
     document.getElementById('bot-save-status').textContent = '✅ Сохранено!';
     setTimeout(() => document.getElementById('bot-save-status').textContent = '', 2000);
     showToast('Настройки бота сохранены', 'success');
@@ -580,6 +597,97 @@ function toggleBlockUser(username) {
 }
 
 // ====== CHANNEL VERIFICATION ======
+function getBotApiBase() {
+    return TG_BOT_PROXY ? TG_BOT_PROXY : TG_BOT_API;
+}
+
+function checkSubscription() {
+    const btn = document.getElementById('verify-btn');
+    const status = document.getElementById('verify-status');
+
+    if (!TG_BOT_TOKEN) {
+        status.textContent = '❌ Бот не настроен. Администратор должен указать токен бота в админ-панели.';
+        status.className = 'verify-status error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+        btn.onclick = verifySubscription;
+        showToast('❌ Невозможно проверить подписку: бот не настроен', 'error');
+        return;
+    }
+
+    if (TG_BOT_TOKEN && !TG_BOT_PROXY) {
+        status.textContent = '❌ Не указан Proxy URL. Администратор должен настроить Cloudflare Worker для обхода CORS.';
+        status.className = 'verify-status error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+        btn.onclick = verifySubscription;
+        showToast('❌ Невозможно проверить подписку: нужен Proxy URL', 'error');
+        return;
+    }
+
+    if (!state.user.telegramId) {
+        status.innerHTML = `
+            <div style="margin-bottom:12px;color:var(--text-dim);">Для проверки подписки нужно авторизоваться через Telegram:</div>
+            <script async src="https://telegram.org/js/telegram-widget.js?22"
+                data-telegram-login="${TG_BOT_USERNAME}"
+                data-size="large"
+                data-onauth="onTgAuthForSub(user)"
+                data-request-access="write">
+            <\/script>
+        `;
+        status.className = 'verify-status loading';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Я авторизовался, проверить';
+        btn.onclick = checkSubscription;
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...';
+    status.textContent = '⏳ Проверяем подписку...';
+    status.className = 'verify-status loading';
+
+    const apiBase = getBotApiBase();
+    const url = `${apiBase}/bot${TG_BOT_TOKEN}/getChatMember?chat_id=@${TG_CHANNEL}&user_id=${state.user.telegramId}`;
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
+                confirmSub();
+            } else {
+                status.textContent = '❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова';
+                status.className = 'verify-status error';
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+                btn.onclick = checkSubscription;
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            status.textContent = '❌ Ошибка подключения к Telegram API. Проверьте Proxy URL и токен бота.';
+            status.className = 'verify-status error';
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+            btn.onclick = checkSubscription;
+            showToast('❌ Ошибка проверки подписки', 'error');
+        });
+}
+
+function onTgAuthForSub(user) {
+    if (!state.user) return;
+    const users = getUsers();
+    const username = state.user.username;
+    if (users[username]) {
+        users[username].telegramId = user.id;
+        users[username].telegramUsername = user.username || username;
+        if (user.photo_url) users[username].telegramPhoto = user.photo_url;
+        state.user = users[username];
+        saveUsers(users);
+        updateUI();
+    }
+    checkSubscription();
+}
+
 function verifySubscription() {
     if (!state.user) {
         showToast('Сначала войдите в аккаунт', 'error');
@@ -599,94 +707,9 @@ function verifySubscription() {
     const status = document.getElementById('verify-status');
     status.textContent = '⏳ Подпишись на канал выше, затем нажми "Проверить"';
     status.className = 'verify-status';
-    document.getElementById('verify-btn').innerHTML = '<i class="fas fa-sync-alt"></i> Проверить подписку';
-    document.getElementById('verify-btn').onclick = checkSubscription;
-}
-
-function checkSubscription() {
     const btn = document.getElementById('verify-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...';
-    const status = document.getElementById('verify-status');
-    status.textContent = '⏳ Проверяем подписку...';
-    status.className = 'verify-status loading';
-
-    if (TG_BOT_TOKEN && state.user.telegramId) {
-        fetch(`${TG_BOT_API}${TG_BOT_TOKEN}/getChatMember?chat_id=@${TG_CHANNEL}&user_id=${state.user.telegramId}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
-                    confirmSub();
-                } else {
-                    status.textContent = '❌ Вы не подписаны на канал. Подпишитесь и попробуйте снова';
-                    status.className = 'verify-status error';
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
-                }
-            })
-            .catch(() => manualConfirm());
-    } else if (TG_BOT_TOKEN && state.user.telegramUsername) {
-        fetch(`${TG_BOT_API}${TG_BOT_TOKEN}/getChatMember?chat_id=@${TG_CHANNEL}&user_id=@${state.user.telegramUsername}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
-                    confirmSub();
-                } else {
-                    manualConfirm();
-                }
-            })
-            .catch(() => manualConfirm());
-    } else {
-        manualConfirm();
-    }
-}
-
-function manualConfirm() {
-    const status = document.getElementById('verify-status');
-    const btn = document.getElementById('verify-btn');
-    btn.disabled = false;
-
-    if (state.user.telegramId || (TG_BOT_TOKEN && state.user.telegramUsername)) {
-        status.textContent = '❌ Не удалось проверить. Возможно, вы не подписаны на канал';
-        status.className = 'verify-status error';
-        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
-        btn.onclick = checkSubscription;
-    } else if (TG_BOT_TOKEN && TG_BOT_USERNAME) {
-        status.innerHTML = `
-            <div style="margin-bottom:12px;">Авторизуйтесь через Telegram для автоматической проверки:</div>
-            <script async src="https://telegram.org/js/telegram-widget.js?22"
-                data-telegram-login="${TG_BOT_USERNAME}"
-                data-size="large"
-                data-onauth="onTelegramAuth(user)"
-                data-request-access="write">
-            <\/script>
-        `;
-        btn.innerHTML = '<i class="fas fa-user"></i> Или подтвердить вручную';
-        btn.onclick = manualConfirmStep2;
-    } else {
-        manualConfirmStep2();
-    }
-}
-
-function manualConfirmStep2() {
-    const username = prompt('Введите ваш Telegram username (например: @username):', state.user.telegramUsername || '');
-    if (!username) return;
-
-    state.user.telegramUsername = username.replace('@', '');
-    const users = getUsers();
-    if (users[state.user.username]) {
-        users[state.user.username].telegramUsername = state.user.telegramUsername;
-        saveUsers(users);
-    }
-
-    const btn = document.getElementById('verify-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...';
-    const status = document.getElementById('verify-status');
-    status.textContent = '⏳ Отправляем запрос...';
-    status.className = 'verify-status loading';
-
-    setTimeout(() => confirmSub(), 2000);
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Проверить подписку';
+    btn.onclick = checkSubscription;
 }
 
 function confirmSub() {

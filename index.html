@@ -90,7 +90,9 @@
                     <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
                         <input type="text" id="admin-bot-token" placeholder="Bot Token (токен от @BotFather)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
                         <input type="text" id="admin-bot-username" placeholder="Bot Username (без @)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
-                        <button class="btn-hero primary" style="padding: 10px; font-size: 12px;" onclick="saveBotSettings()">💾 Сохранить</button>
+                        <input type="text" id="admin-bot-proxy" placeholder="Proxy URL (https://твой-воркер.workers.dev)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:-4px;">Cloudflare Worker для проксирования Telegram API (обходит CORS)</div>
+                            <button class="btn-hero primary" style="padding: 10px; font-size: 12px;" onclick="saveBotSettings()">💾 Сохранить</button>
                         <span id="bot-save-status" style="font-size: 11px; color: var(--text-muted);"></span>
                     </div>
                 </details>
