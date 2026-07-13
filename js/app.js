@@ -13,6 +13,8 @@ const TG_BOT_PROXY_DEFAULT = 'https://shrill-bread-89de.nfajih.workers.dev';
 let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || TG_BOT_TOKEN_DEFAULT;
 let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || TG_BOT_USERNAME_DEFAULT;
 let TG_BOT_PROXY = localStorage.getItem('vf_bot_proxy') || TG_BOT_PROXY_DEFAULT;
+TG_BOT_PROXY = TG_BOT_PROXY.replace(/^[a-zA-Z]+:\/\//, '');
+TG_BOT_PROXY = 'https://' + TG_BOT_PROXY;
 
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
 const VLESS_CONFIGS = {
@@ -471,7 +473,10 @@ function saveBotSettings() {
     const token = document.getElementById('admin-bot-token').value.trim();
     const username = document.getElementById('admin-bot-username').value.trim().replace('@', '');
     let proxy = document.getElementById('admin-bot-proxy').value.trim().replace(/\/+$/, '');
-    if (proxy && !proxy.startsWith('http')) proxy = 'https://' + proxy;
+    if (proxy) {
+        proxy = proxy.replace(/^[a-zA-Z]+:\/\//, '');
+        proxy = 'https://' + proxy;
+    }
     localStorage.setItem('vf_bot_token', token);
     localStorage.setItem('vf_bot_username', username);
     localStorage.setItem('vf_bot_proxy', proxy);
@@ -529,8 +534,8 @@ function adminLogin() {
     btn.disabled = true;
     btn.textContent = '⏳ Проверка...';
 
-    const apiUrl = TG_BOT_PROXY.startsWith('http') ? TG_BOT_PROXY : 'https://' + TG_BOT_PROXY;
-    fetch(apiUrl + '/admin/login', {
+    const apiUrl = TG_BOT_PROXY.replace(/^[a-zA-Z]+:\/\//, '');
+    fetch('https://' + apiUrl + '/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login, password })
@@ -613,7 +618,8 @@ function toggleBlockUser(username) {
 // ====== CHANNEL VERIFICATION ======
 function getBotApiBase() {
     if (!TG_BOT_PROXY) return TG_BOT_API;
-    return TG_BOT_PROXY.startsWith('http') ? TG_BOT_PROXY : 'https://' + TG_BOT_PROXY;
+    let proxy = TG_BOT_PROXY.replace(/^[a-zA-Z]+:\/\//, '');
+    return 'https://' + proxy;
 }
 
 function checkSubscription() {
