@@ -152,102 +152,18 @@ function loadTelegramWidget() {
     }
 }
 
-function isValidTelegramUsername(username) {
-    return /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(username);
-}
-
-function fallbackRegister() {
-    const input = document.getElementById('fallback-tg');
-    const refInput = document.getElementById('fallback-ref');
-    const tgUsername = input.value.trim().replace('@', '');
-    const refCode = refInput.value.trim().toUpperCase();
-
-    if (!tgUsername) {
-        showToast('Введите ваш Telegram username', 'error');
-        return;
-    }
-
-    if (!isValidTelegramUsername(tgUsername)) {
-        showToast('❌ Некорректный Telegram username. Должен быть от 5 до 32 символов, начинаться с буквы, содержать только a-z, 0-9, _', 'error');
-        return;
-    }
-
-    const users = getUsers();
-    let username = tgUsername;
-
-    if (isUserBlocked(username)) {
-        showToast('❌ Ваш аккаунт заблокирован', 'error');
-        return;
-    }
-
-    if (users[username]) {
-        users[username].lastActive = new Date().toISOString();
-        state.user = users[username];
-        saveUsers(users);
-    } else {
-        const newUser = {
-            username,
-            telegramId: '',
-            telegramUsername: username,
-            telegramPhoto: '',
-            avatarData: '',
-            coins: 100,
-            joinDate: new Date().toISOString(),
-            lastDaily: null,
-            lastActive: new Date().toISOString(),
-            gamesPlayed: 0,
-            gamesWon: 0,
-            referredBy: '',
-            referralCount: 0,
-            referralCode: username + Math.random().toString(36).slice(2, 6).toUpperCase(),
-            blocked: false
-        };
-
-        if (refCode) {
-            const allUsers = getUsers();
-            for (const u in allUsers) {
-                if (allUsers[u].referralCode === refCode && u !== username && !allUsers[u].blocked) {
-                    newUser.referredBy = u;
-                    newUser.coins += REFERRAL_BONUS;
-                    allUsers[u].coins += REFERRAL_BONUS;
-                    allUsers[u].referralCount = (allUsers[u].referralCount || 0) + 1;
-                    saveUsers(allUsers);
-                    showToast(`🎉 Реферальный код активирован! +${REFERRAL_BONUS} монет`, 'success');
-                    break;
-                }
-            }
-        }
-
-        users[username] = newUser;
-        state.user = newUser;
-        saveUsers(users);
-    }
-
-    setCurrentUser(username);
-    hideAuth();
-    updateUI();
-    input.value = '';
-    refInput.value = '';
-    showToast(`Добро пожаловать, ${username}!`, 'success');
-}
-
 function onTelegramAuth(user) {
     state.pendingTgUser = user;
     const refArea = document.getElementById('ref-input-area');
     if (refArea) refArea.classList.remove('hidden');
 
-    const refInput = document.getElementById('reg-referral-tg');
-    if (refInput) {
-        const users = getUsers();
-        const username = user.username || 'user_' + user.id;
-        if (users[username]) {
-            refInput.value = '';
-            finalizeTgAuth();
-        }
-        return;
+    const users = getUsers();
+    const username = user.username || 'user_' + user.id;
+    if (users[username]) {
+        const refInput = document.getElementById('reg-referral-tg');
+        if (refInput) refInput.value = '';
+        finalizeTgAuth();
     }
-
-    finalizeTgAuth();
 }
 
 function finalizeTgAuth() {
@@ -743,24 +659,11 @@ function checkSubscription() {
     }
 
     if (!state.user.telegramId) {
-        status.innerHTML = `
-            <div style="margin-bottom:8px;color:var(--text-dim);font-size:13px;">
-                👤 Введи свой Telegram ID для проверки подписки
-            </div>
-            <div style="margin-bottom:10px;">
-                <input type="text" id="tgid-input" placeholder="Например: 123456789" style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--glass-border);border-radius:10px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box;">
-            </div>
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">
-                🔍 Не знаешь ID? Напиши боту <a href="https://t.me/userinfobot" target="_blank" style="color:var(--cyan);">@userinfobot</a> — он пришлёт
-            </div>
-            <button class="btn-hero primary" style="padding:10px;font-size:12px;width:100%;justify-content:center;" onclick="setTelegramId()">
-                <i class="fas fa-check"></i> Подтвердить ID
-            </button>
-        `;
-        status.className = 'verify-status loading';
+        status.textContent = '❌ Нет Telegram ID. Войдите через Telegram Widget.';
+        status.className = 'verify-status error';
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync-alt"></i> У меня есть ID, проверить';
-        btn.onclick = checkSubscription;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+        btn.onclick = verifySubscription;
         return;
     }
 
@@ -803,41 +706,6 @@ function checkSubscription() {
                 showToast('❌ Ошибка подключения. Попробуйте через VPN или настройте свой домен для Worker', 'error');
             }
         });
-}
-
-function setTelegramId() {
-    if (!state.user) return;
-    const input = document.getElementById('tgid-input');
-    if (!input) return;
-    const id = input.value.trim();
-    if (!id || !/^\d+$/.test(id)) {
-        showToast('❌ Введите числовой Telegram ID', 'error');
-        return;
-    }
-    const users = getUsers();
-    const username = state.user.username;
-    if (users[username]) {
-        users[username].telegramId = id;
-        state.user = users[username];
-        saveUsers(users);
-        updateUI();
-    }
-    checkSubscription();
-}
-
-function onTgAuthForSub(user) {
-    if (!state.user) return;
-    const users = getUsers();
-    const username = state.user.username;
-    if (users[username]) {
-        users[username].telegramId = user.id;
-        users[username].telegramUsername = user.username || username;
-        if (user.photo_url) users[username].telegramPhoto = user.photo_url;
-        state.user = users[username];
-        saveUsers(users);
-        updateUI();
-    }
-    checkSubscription();
 }
 
 function verifySubscription() {

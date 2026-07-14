@@ -52,23 +52,8 @@
                     <label>Реферальный код <span style="color:var(--text-muted);font-weight:400;">(если есть)</span></label>
                     <input type="text" id="reg-referral-tg" placeholder="Введите код друга" autocomplete="off">
                 </div>
+                <button class="btn-primary" onclick="finalizeTgAuth()" style="margin-top: 4px;">Войти</button>
             </div>
-
-            <div id="auth-fallback" style="margin-top: 8px;">
-                <div class="form-group">
-                    <label>Telegram username</label>
-                    <input type="text" id="fallback-tg" placeholder="@username" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Реферальный код <span style="color:var(--text-muted);font-weight:400;">(если есть)</span></label>
-                    <input type="text" id="fallback-ref" placeholder="Введите код друга" autocomplete="off">
-                </div>
-                <button class="btn-primary" onclick="fallbackRegister()">Войти</button>
-            </div>
-
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 12px; text-align: center;">
-                <i class="fas fa-info-circle"></i> Войди через Telegram — подписка на канал понадобится позже, при получении VPN
-            </p>
         </div>
     </div>
 
