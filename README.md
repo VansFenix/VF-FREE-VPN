@@ -41,5 +41,5 @@
 
 ---
 
-**Канал:** [@wildVF](https://t.me/wildVF)
-**Владелец:** [@vansFenix](https://t.me/vansFenix)
+**Канал:** [@wildVF](https://telegram.me/wildVF)
+**Владелец:** [@vansFenix](https://telegram.me/vansFenix)
