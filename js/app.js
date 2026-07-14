@@ -11,8 +11,8 @@ const TG_BOT_USERNAME_DEFAULT = 'WildVFrobot';
 const TG_BOT_PROXY_DEFAULT = 'https://shrill-bread-89de.nfajih.workers.dev';
 
 // Local admin credentials (change in admin.txt)
-const ADMIN_LOGIN_DEFAULT = 'FS105iLDAX';
-const ADMIN_PASSWORD_DEFAULT = '3.m9-uKsAcEi+tNJV,W\\[1&o';
+const ADMIN_LOGIN_DEFAULT = 'admin';
+const ADMIN_PASSWORD_DEFAULT = 'admin123';
 
 let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || TG_BOT_TOKEN_DEFAULT;
 let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || TG_BOT_USERNAME_DEFAULT;
@@ -51,26 +51,15 @@ function getUsers() {
 
 function saveUsers(users) {
     localStorage.setItem('vf_users', JSON.stringify(users));
-    syncCurrentUser(users);
+    const currentUsername = localStorage.getItem('vf_current_user');
+    if (currentUsername && users[currentUsername]) {
+        saveUserToKV(currentUsername, users[currentUsername]);
+    }
 }
 
 function normalizeApiUrl() {
     if (!TG_BOT_PROXY) return '';
     return TG_BOT_PROXY;
-}
-
-function syncCurrentUser(users) {
-    const currentUsername = localStorage.getItem('vf_current_user');
-    if (!currentUsername || !TG_BOT_PROXY) return;
-    const userData = users[currentUsername];
-    if (!userData) return;
-
-    const apiUrl = normalizeApiUrl();
-    fetch(apiUrl + '/api/user/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: currentUsername, data: userData })
-    }).catch(() => {});
 }
 
 function getCurrentUser() {
@@ -82,6 +71,31 @@ function getCurrentUser() {
 
 function setCurrentUser(username) {
     localStorage.setItem('vf_current_user', username || '');
+}
+
+// ====== KV (WORKER) HELPERS ======
+async function fetchUserFromKV(username) {
+    if (!TG_BOT_PROXY) return null;
+    try {
+        const r = await fetch(normalizeApiUrl() + '/api/user/get', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+        const data = await r.json();
+        return data.ok && data.user ? data.user : null;
+    } catch { return null; }
+}
+
+async function saveUserToKV(username, userData) {
+    if (!TG_BOT_PROXY) return;
+    try {
+        await fetch(normalizeApiUrl() + '/api/user/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, data: userData })
+        });
+    } catch {}
 }
 
 // ====== UTILITY ======
@@ -155,7 +169,7 @@ function showManualLogin() {
     document.getElementById('manual-login-fields').style.display = 'block';
 }
 
-function manualLogin() {
+async function manualLogin() {
     const input = document.getElementById('manual-username');
     const username = input.value.trim().replace('@', '');
     if (!username) {
@@ -170,6 +184,27 @@ function manualLogin() {
         return;
     }
 
+    // Try KV first
+    if (TG_BOT_PROXY) {
+        const kvUser = await fetchUserFromKV(username);
+        if (kvUser) {
+            if (kvUser.blocked) {
+                showToast('❌ Аккаунт заблокирован', 'error');
+                return;
+            }
+            kvUser.lastActive = new Date().toISOString();
+            users[username] = kvUser;
+            state.user = kvUser;
+            saveUsers(users);
+            setCurrentUser(username);
+            hideAuth();
+            updateUI();
+            showToast(`С возвращением, ${username}!`, 'success');
+            return;
+        }
+    }
+
+    // Local fallback or new user
     if (users[username]) {
         users[username].lastActive = new Date().toISOString();
         state.user = users[username];
@@ -218,7 +253,7 @@ function onTelegramAuth(user) {
     }
 }
 
-function finalizeTgAuth() {
+async function finalizeTgAuth() {
     if (!state.pendingTgUser) {
         showToast('Сначала авторизуйся через Telegram', 'error');
         return;
@@ -233,6 +268,31 @@ function finalizeTgAuth() {
         return;
     }
 
+    // Try KV first
+    if (TG_BOT_PROXY) {
+        const kvUser = await fetchUserFromKV(username);
+        if (kvUser) {
+            if (kvUser.blocked) {
+                showToast('❌ Ваш аккаунт заблокирован', 'error');
+                return;
+            }
+            kvUser.telegramId = user.id;
+            kvUser.telegramUsername = username;
+            if (user.photo_url) kvUser.telegramPhoto = user.photo_url;
+            kvUser.lastActive = new Date().toISOString();
+            users[username] = kvUser;
+            state.user = kvUser;
+            saveUsers(users);
+            state.pendingTgUser = null;
+            setCurrentUser(username);
+            hideAuth();
+            updateUI();
+            showToast(`С возвращением, ${username}!`, 'success');
+            return;
+        }
+    }
+
+    // Local fallback or new user
     if (users[username]) {
         users[username].telegramId = user.id;
         users[username].telegramUsername = username;
@@ -617,22 +677,31 @@ function renderAdminUsers() {
         }).join('');
     }
 
-    // Always render from localStorage first
-    render(getUsers());
-
-    // Optionally try Worker for cloud data (silent)
-    if (apiUrl && state.adminLogin) {
-        fetch(apiUrl + '/api/users/list', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ login: state.adminLogin, password: state.adminPassword })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.ok && data.users) render(data.users);
-            })
-            .catch(() => {});
+    // Try KV first, fall back to localStorage
+    async function loadFromKV() {
+        if (!apiUrl || !state.adminLogin) {
+            render(getUsers());
+            return;
+        }
+        try {
+            const r = await fetch(apiUrl + '/api/users/list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login: state.adminLogin, password: state.adminPassword })
+            });
+            const data = await r.json();
+            if (data.ok && data.users) {
+                render(data.users);
+                // Sync KV data to localStorage
+                localStorage.setItem('vf_users', JSON.stringify(data.users));
+            } else {
+                render(getUsers());
+            }
+        } catch {
+            render(getUsers());
+        }
     }
+    loadFromKV();
 }
 
 function toggleBlockUser(username) {
@@ -640,16 +709,6 @@ function toggleBlockUser(username) {
     if (!users[username]) return;
     users[username].blocked = !users[username].blocked;
     saveUsers(users);
-
-    // Sync block status to Worker
-    const apiUrl = normalizeApiUrl();
-    if (apiUrl) {
-        fetch(apiUrl + '/api/user/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, data: users[username] })
-        }).catch(() => {});
-    }
 
     if (state.user && state.user.username === username && users[username].blocked) {
         showToast('❌ Ваш аккаунт заблокирован администратором', 'error');
@@ -1080,6 +1139,22 @@ function init() {
             state.user = saved;
             hideAuth();
             updateUI();
+            // Refresh from KV in background
+            if (TG_BOT_PROXY && saved.username) {
+                fetchUserFromKV(saved.username).then(kvUser => {
+                    if (!kvUser) return;
+                    if (kvUser.blocked) {
+                        showToast('❌ Аккаунт заблокирован администратором', 'error');
+                        logout();
+                        return;
+                    }
+                    const users = getUsers();
+                    users[saved.username] = kvUser;
+                    saveUsers(users);
+                    state.user = kvUser;
+                    updateUI();
+                }).catch(() => {});
+            }
         }
     }
 
