@@ -134,6 +134,8 @@ function loadTelegramWidget() {
     const container = document.getElementById('tg-login-container');
     if (!container) return;
 
+    document.getElementById('tg-widget-status').style.display = 'block';
+
     if (TG_BOT_USERNAME) {
         container.style.display = 'flex';
         container.innerHTML = '';
@@ -146,10 +148,76 @@ function loadTelegramWidget() {
         script.setAttribute('data-onauth', 'onTelegramAuth(user)');
         script.setAttribute('data-request-access', 'write');
         container.appendChild(script);
+
+        // If widget doesn't load in 3s (blocked domain), show manual fallback
+        setTimeout(() => {
+            if (!container.querySelector('iframe')) {
+                document.getElementById('tg-widget-status').style.display = 'none';
+                document.getElementById('show-manual-btn').style.display = 'inline-flex';
+            }
+        }, 3000);
     } else {
         container.style.display = 'none';
         container.innerHTML = '';
+        document.getElementById('tg-widget-status').style.display = 'none';
+        document.getElementById('show-manual-btn').style.display = 'inline-flex';
     }
+}
+
+function showManualLogin() {
+    document.getElementById('tg-login-container').style.display = 'none';
+    document.getElementById('show-manual-btn').style.display = 'none';
+    document.getElementById('tg-widget-status').style.display = 'none';
+    document.getElementById('manual-login-area').style.display = 'block';
+}
+
+function manualLogin() {
+    const input = document.getElementById('manual-username');
+    const username = input.value.trim().replace('@', '');
+    if (!username) {
+        showToast('Введите никнейм', 'error');
+        return;
+    }
+
+    const users = getUsers();
+
+    if (isUserBlocked(username)) {
+        showToast('❌ Аккаунт заблокирован', 'error');
+        return;
+    }
+
+    if (users[username]) {
+        users[username].lastActive = new Date().toISOString();
+        state.user = users[username];
+        saveUsers(users);
+    } else {
+        const newUser = {
+            username,
+            telegramId: '',
+            telegramUsername: username,
+            telegramPhoto: '',
+            avatarData: '',
+            coins: 100,
+            joinDate: new Date().toISOString(),
+            lastDaily: null,
+            lastActive: new Date().toISOString(),
+            gamesPlayed: 0,
+            gamesWon: 0,
+            referredBy: '',
+            referralCount: 0,
+            referralCode: username + Math.random().toString(36).slice(2, 6).toUpperCase(),
+            blocked: false
+        };
+        users[username] = newUser;
+        state.user = newUser;
+        saveUsers(users);
+    }
+
+    setCurrentUser(username);
+    hideAuth();
+    updateUI();
+    input.value = '';
+    showToast(`Добро пожаловать, ${username}!`, 'success');
 }
 
 function onTelegramAuth(user) {
