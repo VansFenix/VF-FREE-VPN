@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://telegram.org 'unsafe-inline' 'unsafe-eval'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://telegram.org;">
     <title>VF FREE VPN — 6 бесплатных подписок</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,19 +80,6 @@
             <div class="auth-title">🔐 Админ-панель</div>
             <div class="auth-subtitle">Управление пользователями</div>
 
-            <div id="admin-login-area">
-                <div class="form-group">
-                    <label>Логин</label>
-                    <input type="text" id="admin-login" placeholder="Логин из admin.txt" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Пароль</label>
-                    <input type="password" id="admin-password" placeholder="••••••••" autocomplete="off">
-                </div>
-                <button class="btn-primary" onclick="adminLogin()">Войти в админ-панель</button>
-                <p id="admin-login-error" style="color: var(--pink); font-size: 13px; margin-top: 8px; text-align: center;"></p>
-            </div>
-
             <div id="admin-panel-area" class="hidden">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <span style="font-size: 14px; color: var(--text-dim);">Всего: <strong id="admin-user-count">0</strong></span>
@@ -105,6 +93,8 @@
                         <input type="text" id="admin-bot-username" placeholder="Bot Username (без @)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
                         <input type="text" id="admin-bot-proxy" placeholder="Proxy URL (https://твой-воркер.workers.dev)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
                         <div style="font-size:11px;color:var(--text-muted);margin-top:-4px;">Cloudflare Worker для проксирования Telegram API (обходит CORS)</div>
+                        <input type="password" id="admin-api-key" placeholder="API Key (из WORKER_CODE.txt)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:-4px;">Защита Worker: без этого ключа API не принимает запросы</div>
                             <button class="btn-hero primary" style="padding: 10px; font-size: 12px;" onclick="saveBotSettings()">💾 Сохранить</button>
                         <span id="bot-save-status" style="font-size: 11px; color: var(--text-muted);"></span>
                     </div>

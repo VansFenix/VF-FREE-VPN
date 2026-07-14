@@ -6,19 +6,15 @@ const DAILY_BONUS_AMOUNT = 50;
 const TG_BOT_API = 'https://api.telegram.org/bot';
 const REFERRAL_BONUS = 50;
 
-const TG_BOT_TOKEN_DEFAULT = '8834371476:AAEOAH98X0VESvgBpX9_oPCVzUXRRK_Ee6A';
-const TG_BOT_USERNAME_DEFAULT = 'WildVFrobot';
-const TG_BOT_PROXY_DEFAULT = 'https://shrill-bread-89de.nfajih.workers.dev';
+// Токен, username и proxy задаются в админ-панели (сохраняются в localStorage)
 
-// Local admin credentials (change in admin.txt)
-const ADMIN_LOGIN_DEFAULT = '81mDz5LSBvPhyI';
-const ADMIN_PASSWORD_DEFAULT = 'XA-jk!?2#9(_gU%ihRJn5se.';
+// Admin: только @vansFenix (через Telegram ID)
 const CREATOR_TG_ID = 1243980540;
 const CREATOR_USERNAME = 'vansFenix';
 
-let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || TG_BOT_TOKEN_DEFAULT;
-let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || TG_BOT_USERNAME_DEFAULT;
-let TG_BOT_PROXY = (localStorage.getItem('vf_bot_proxy') || TG_BOT_PROXY_DEFAULT).replace(/^[a-zA-Z]+:\/\//, '');
+let TG_BOT_TOKEN = getSecurely('vf_bot_token');
+let TG_BOT_USERNAME = getSecurely('vf_bot_username');
+let TG_BOT_PROXY = (localStorage.getItem('vf_bot_proxy') || '').replace(/^[a-zA-Z]+:\/\//, '');
 if (TG_BOT_PROXY) TG_BOT_PROXY = 'https://' + TG_BOT_PROXY;
 
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
@@ -127,14 +123,39 @@ function loadAvatarImage(username, photoUrl) {
     img.src = photoUrl;
 }
 
+// ====== SECURE STORAGE (обфускация в localStorage) ======
+const STORAGE_KEY = btoa('vf');
+function obfuscate(str) {
+    try { return btoa(encodeURIComponent(str)); } catch { return str; }
+}
+function deobfuscate(str) {
+    try { return decodeURIComponent(atob(str)); } catch { return str; }
+}
+function getSecurely(key) {
+    const raw = localStorage.getItem(key);
+    if (!raw) return '';
+    const val = deobfuscate(raw);
+    return val && val.startsWith('vf_') ? val : raw; // fallback для старых данных
+}
+function setSecurely(key, val) {
+    localStorage.setItem(key, val ? obfuscate(val) : '');
+}
+
+// ====== API KEY для Worker ======
+function getApiKey() {
+    return localStorage.getItem('vf_api_key') || '';
+}
+
 // ====== KV (WORKER) HELPERS ======
 async function fetchUserFromKV(username) {
     if (!TG_BOT_PROXY) return null;
+    const apiKey = getApiKey();
+    if (!apiKey) return null;
     try {
         const r = await fetch(normalizeApiUrl() + '/api/user/get', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username })
+            body: JSON.stringify({ username, apiKey })
         });
         const data = await r.json();
         return data.ok && data.user ? data.user : null;
@@ -143,13 +164,22 @@ async function fetchUserFromKV(username) {
 
 async function saveUserToKV(username, userData) {
     if (!TG_BOT_PROXY) return;
+    const apiKey = getApiKey();
+    if (!apiKey) return;
     try {
         await fetch(normalizeApiUrl() + '/api/user/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, data: userData })
+            body: JSON.stringify({ username, data: userData, apiKey })
         });
     } catch {}
+}
+
+// ====== SECURITY: HTML escape ======
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 // ====== UTILITY ======
@@ -225,9 +255,14 @@ function showManualLogin() {
 
 async function manualLogin() {
     const input = document.getElementById('manual-username');
-    const username = input.value.trim().replace('@', '');
-    if (!username) {
-        showToast('Введите никнейм', 'error');
+    const raw = input.value.trim().replace('@', '');
+    const username = raw.replace(/[^a-zA-Z0-9_]/g, '');
+    if (!username || username.length < 3) {
+        showToast('Никнейм: от 3 символов, только буквы/цифры/_', 'error');
+        return;
+    }
+    if (username !== raw) {
+        showToast('Никнейм содержит недопустимые символы', 'error');
         return;
     }
 
@@ -565,10 +600,10 @@ function copyConfig(name) {
     navigator.clipboard.writeText(link).then(() => {
         const btn = document.querySelector(`.sub-card[data-config="${name}"] .btn-sub`);
         if (btn) {
-            btn.innerHTML = '<i class="fas fa-check"></i> Скопировано!';
+            btn.innerHTML = '<i class=\"fas fa-check\"></i> Скопировано!';
             btn.classList.add('copied');
             setTimeout(() => {
-                btn.innerHTML = '<i class="fas fa-copy"></i> Копировать подписку';
+                btn.innerHTML = '<i class=\"fas fa-copy\"></i> Копировать подписку';
                 btn.classList.remove('copied');
             }, 2500);
         }
@@ -584,22 +619,26 @@ function loadBotSettingsUI() {
     const token = document.getElementById('admin-bot-token');
     const username = document.getElementById('admin-bot-username');
     const proxy = document.getElementById('admin-bot-proxy');
-    if (token) token.value = localStorage.getItem('vf_bot_token') || '';
-    if (username) username.value = localStorage.getItem('vf_bot_username') || '';
+    const apiKey = document.getElementById('admin-api-key');
+    if (token) token.value = TG_BOT_TOKEN;
+    if (username) username.value = TG_BOT_USERNAME;
     if (proxy) proxy.value = localStorage.getItem('vf_bot_proxy') || '';
+    if (apiKey) apiKey.value = localStorage.getItem('vf_api_key') || '';
 }
 
 function saveBotSettings() {
     const token = document.getElementById('admin-bot-token').value.trim();
     const username = document.getElementById('admin-bot-username').value.trim().replace('@', '');
     let proxy = document.getElementById('admin-bot-proxy').value.trim().replace(/\/+$/, '');
+    const apiKey = document.getElementById('admin-api-key').value.trim();
     if (proxy) {
         proxy = proxy.replace(/^[a-zA-Z]+:\/\//, '');
         proxy = 'https://' + proxy;
     }
-    localStorage.setItem('vf_bot_token', token);
-    localStorage.setItem('vf_bot_username', username);
+    setSecurely('vf_bot_token', token);
+    setSecurely('vf_bot_username', username);
     localStorage.setItem('vf_bot_proxy', proxy);
+    localStorage.setItem('vf_api_key', apiKey);
     TG_BOT_TOKEN = token;
     TG_BOT_USERNAME = username;
     TG_BOT_PROXY = proxy;
@@ -612,27 +651,16 @@ function openAdminPanel() {
     adminClickCount++;
     if (adminClickCount >= 5) {
         adminClickCount = 0;
-        document.getElementById('admin-overlay').classList.remove('hidden');
 
-        // Auto-login for creator (@vansFenix)
         if (state.user && (state.user.telegramId == CREATOR_TG_ID || state.user.username === CREATOR_USERNAME)) {
-            state.adminLogin = ADMIN_LOGIN_DEFAULT;
-            state.adminPassword = ADMIN_PASSWORD_DEFAULT;
-            document.getElementById('admin-login-area').classList.add('hidden');
+            document.getElementById('admin-overlay').classList.remove('hidden');
             document.getElementById('admin-panel-area').classList.remove('hidden');
-            document.getElementById('admin-login-error').textContent = '';
             renderAdminUsers();
             showToast('✅ Добро пожаловать в админ-панель', 'success');
             loadBotSettingsUI();
-            return;
+        } else {
+            showToast('❌ Только @vansFenix может открыть админ-панель', 'error');
         }
-
-        document.getElementById('admin-login-area').classList.remove('hidden');
-        document.getElementById('admin-panel-area').classList.add('hidden');
-        document.getElementById('admin-login-error').textContent = '';
-        document.getElementById('admin-login').value = '';
-        document.getElementById('admin-password').value = '';
-        loadBotSettingsUI();
     }
 }
 
@@ -643,75 +671,8 @@ function closeAdmin() {
 function adminLogout() {
     state.adminLogin = '';
     state.adminPassword = '';
-    document.getElementById('admin-login-area').classList.remove('hidden');
     document.getElementById('admin-panel-area').classList.add('hidden');
-    document.getElementById('admin-login-error').textContent = '';
-    document.getElementById('admin-login').value = '';
-    document.getElementById('admin-password').value = '';
     showToast('Вы вышли из админ-панели', 'info');
-}
-
-function adminLogin() {
-    const login = document.getElementById('admin-login').value.trim();
-    const password = document.getElementById('admin-password').value;
-    const errorEl = document.getElementById('admin-login-error');
-
-    if (!login || !password) {
-        errorEl.textContent = 'Введите логин и пароль';
-        return;
-    }
-
-    const btn = document.querySelector('#admin-login-area .btn-primary');
-    btn.disabled = true;
-    btn.textContent = '⏳ Проверка...';
-
-    // Try Worker first, fall back to local auth
-    function localAuth() {
-        btn.disabled = false;
-        btn.textContent = 'Войти в админ-панель';
-        if (login === ADMIN_LOGIN_DEFAULT && password === ADMIN_PASSWORD_DEFAULT) {
-            state.adminLogin = login;
-            state.adminPassword = password;
-            document.getElementById('admin-login-area').classList.add('hidden');
-            document.getElementById('admin-panel-area').classList.remove('hidden');
-            errorEl.textContent = '';
-            renderAdminUsers();
-            showToast('✅ Добро пожаловать в админ-панель', 'success');
-        } else {
-            errorEl.textContent = 'Неверный логин или пароль';
-        }
-    }
-
-    if (!TG_BOT_PROXY) {
-        localAuth();
-        return;
-    }
-
-    const apiUrl = normalizeApiUrl();
-    fetch(apiUrl + '/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login, password })
-    })
-        .then(r => r.json())
-        .then(data => {
-            btn.disabled = false;
-            btn.textContent = 'Войти в админ-панель';
-            if (data.ok) {
-                state.adminLogin = login;
-                state.adminPassword = password;
-                document.getElementById('admin-login-area').classList.add('hidden');
-                document.getElementById('admin-panel-area').classList.remove('hidden');
-                errorEl.textContent = '';
-                renderAdminUsers();
-                showToast('✅ Добро пожаловать в админ-панель', 'success');
-            } else {
-                localAuth();
-            }
-        })
-        .catch(() => {
-            localAuth();
-        });
 }
 
 function renderAdminUsers() {
@@ -727,25 +688,31 @@ function renderAdminUsers() {
         });
 
         list.innerHTML = sorted.map(([username, data]) => {
+            const safeUsername = escapeHtml(username);
+            const safeTgUsername = escapeHtml(data.telegramUsername || username);
+            const coins = parseInt(data.coins) || 0;
+            const gamesPlayed = parseInt(data.gamesPlayed) || 0;
+            const referralCount = parseInt(data.referralCount) || 0;
             const isBlocked = data.blocked === true;
-            const lastSeen = data.lastActive ? formatDate(data.lastActive) : 'никогда';
+            const lastSeen = data.lastActive ? escapeHtml(formatDate(data.lastActive)) : 'никогда';
             const status = isBlocked ? 'blocked' : (data.lastActive ? 'active' : 'offline');
             const statusLabel = isBlocked ? '🔴 Заблокирован' : (data.lastActive ? '🟢 Активен' : '⚪ Неактивен');
             const btnText = isBlocked ? '✅ Разблокировать' : '🔨 Блокировать';
             const btnClass = isBlocked ? 'admin-block-btn blocked' : 'admin-block-btn';
+            const safeJsUsername = username.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
             return `
                 <div class="admin-user-card">
                     <div class="admin-user-info">
-                        <div class="admin-user-avatar">${username.charAt(0).toUpperCase()}</div>
+                        <div class="admin-user-avatar">${escapeHtml(username.charAt(0).toUpperCase())}</div>
                         <div class="admin-user-details">
-                            <div class="admin-user-name">${username} <span style="color:var(--text-muted);font-size:11px;">@${data.telegramUsername || username}</span></div>
-                            <div class="admin-user-meta">🪙 ${data.coins || 0} · 🎮 ${data.gamesPlayed || 0} игр · ${data.referralCount || 0} реф · Последний раз: ${lastSeen}</div>
+                            <div class="admin-user-name">${safeUsername} <span style="color:var(--text-muted);font-size:11px;">@${safeTgUsername}</span></div>
+                            <div class="admin-user-meta">🪙 ${coins} · 🎮 ${gamesPlayed} игр · ${referralCount} реф · Последний раз: ${lastSeen}</div>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span class="admin-user-status ${status}">${statusLabel}</span>
-                        <button class="${btnClass}" onclick="toggleBlockUser('${username}')">${btnText}</button>
+                        <button class="${btnClass}" onclick="toggleBlockUser('${safeJsUsername}')">${btnText}</button>
                     </div>
                 </div>
             `;
@@ -758,11 +725,12 @@ function renderAdminUsers() {
             render(getUsers());
             return;
         }
+        const apiKey = getApiKey();
         try {
             const r = await fetch(apiUrl + '/api/users/list', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ login: state.adminLogin, password: state.adminPassword })
+                body: JSON.stringify({ login: state.adminLogin, password: state.adminPassword, apiKey })
             });
             const data = await r.json();
             if (data.ok && data.users) {
