@@ -110,6 +110,11 @@
                 </details>
 
                 <div style="max-height: 360px; overflow-y: auto;" id="admin-user-list"></div>
+
+                <div style="margin-top: 16px; padding: 16px; background: rgba(255,45,123,0.04); border: 1px solid rgba(255,45,123,0.1); border-radius: var(--radius-sm); text-align: center;">
+                    <button class="btn-hero secondary" style="padding: 10px 20px; font-size: 12px;" onclick="resetAllSubscriptions()">🔄 Сбросить подписки всем пользователям</button>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Очищает статус подписки у всех — для тестирования</div>
+                </div>
             </div>
 
             <button class="btn-primary" onclick="closeAdmin()" style="margin-top: 12px; background: var(--glass); color: var(--text-dim); border: 1px solid var(--glass-border);">Закрыть</button>

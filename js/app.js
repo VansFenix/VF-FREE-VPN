@@ -696,6 +696,22 @@ function toggleBlockUser(username) {
     );
 }
 
+function resetAllSubscriptions() {
+    let count = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('vf_subscribed_')) {
+            localStorage.removeItem(key);
+            count++;
+        }
+    }
+    if (state.user) {
+        setSubscribed(false);
+        updateUI();
+    }
+    showToast(`✅ Сброшено ${count} подписок`, 'success');
+}
+
 // ====== CHANNEL VERIFICATION ======
 function getBotApiBase() {
     if (!TG_BOT_PROXY) return TG_BOT_API;
