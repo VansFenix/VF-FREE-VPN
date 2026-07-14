@@ -12,14 +12,14 @@ const REFERRAL_BONUS = 50;
 const CREATOR_TG_ID = 1243980540;
 const CREATOR_USERNAME = 'vansFenix';
 
-let TG_BOT_TOKEN = localStorage.getItem('vf_bot_token') || '';
 let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || '';
 let TG_BOT_PROXY = (localStorage.getItem('vf_bot_proxy') || '').replace(/^[a-zA-Z]+:\/\//, '');
 if (TG_BOT_PROXY) TG_BOT_PROXY = 'https://' + TG_BOT_PROXY;
 
+const DEFAULT_PROXY = 'https://shrill-bread-89de.nfajih.workers.dev';
+
 async function fetchBotConfig() {
-    const proxy = TG_BOT_PROXY;
-    if (!proxy) return;
+    const proxy = TG_BOT_PROXY || DEFAULT_PROXY;
     try {
         const r = await fetch(proxy + '/api/config');
         const data = await r.json();
@@ -68,8 +68,7 @@ function saveUsers(users) {
 }
 
 function normalizeApiUrl() {
-    if (!TG_BOT_PROXY) return '';
-    return TG_BOT_PROXY;
+    return TG_BOT_PROXY || DEFAULT_PROXY;
 }
 
 function getCurrentUser() {
