@@ -7,6 +7,6 @@ https://shrill-bread-89de.nfajih.workers.dev
 (из token.txt)
 
 ── Bot Username ──
-WildVFrobot
+wvfrobot
 
 (Токен бота теперь задаётся в коде Worker — константа BOT_TOKEN)
