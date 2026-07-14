@@ -1,12 +1,1 @@
 ВВЕСТИ В АДМИН-ПАНЕЛИ (Настройки бота):
-
-── Proxy URL ──
-https://shrill-bread-89de.nfajih.workers.dev
-
-── API Key ──
-(из token.txt)
-
-── Bot Username ──
-wvfrobot
-
-(Токен бота теперь задаётся в коде Worker — константа BOT_TOKEN)
