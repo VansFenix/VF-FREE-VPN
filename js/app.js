@@ -706,13 +706,23 @@ function checkSubscription() {
     const btn = document.getElementById('verify-btn');
     const status = document.getElementById('verify-status');
 
-    if (!TG_BOT_TOKEN || !TG_BOT_PROXY) {
-        // Local fallback: simulate check
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверка...';
-        status.textContent = '⏳ Проверяем подписку...';
-        status.className = 'verify-status loading';
-        setTimeout(() => confirmSub(), 2000);
+    if (!TG_BOT_TOKEN) {
+        status.textContent = '❌ Бот не настроен. Администратор должен указать токен бота в админ-панели.';
+        status.className = 'verify-status error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+        btn.onclick = verifySubscription;
+        showToast('❌ Невозможно проверить подписку: бот не настроен', 'error');
+        return;
+    }
+
+    if (TG_BOT_TOKEN && !TG_BOT_PROXY) {
+        status.textContent = '❌ Не указан Proxy URL. Администратор должен настроить Cloudflare Worker для обхода CORS.';
+        status.className = 'verify-status error';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
+        btn.onclick = verifySubscription;
+        showToast('❌ Невозможно проверить подписку: нужен Proxy URL', 'error');
         return;
     }
 
@@ -754,13 +764,6 @@ function checkSubscription() {
         btn.onclick = checkSubscription;
     }
 
-    function localSubCheck() {
-        status.textContent = '⏳ Проверяем подписку через Telegram (локально)...';
-        setTimeout(() => {
-            confirmSub();
-        }, 2000);
-    }
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
     fetch(url, { signal: controller.signal })
@@ -780,7 +783,8 @@ function checkSubscription() {
                 showError('❌ Тайм-аут подключения к Telegram API. Возможно сервер заблокирован в вашем регионе.');
                 showToast('❌ Тайм-аут. Попробуйте через VPN или смените Proxy URL', 'error');
             } else {
-                localSubCheck();
+                showError('❌ Не удалось подключиться к Telegram API. Возможно Proxy URL (' + TG_BOT_PROXY + ') заблокирован в вашем регионе.');
+                showToast('❌ Ошибка подключения. Попробуйте через VPN или настройте свой домен для Worker', 'error');
             }
         });
 }
