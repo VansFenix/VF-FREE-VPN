@@ -4,10 +4,9 @@
 https://shrill-bread-89de.nfajih.workers.dev
 
 ── API Key ──
-sk-f82zQ%DOoc=HrYGXK3nwPjuv@B6tMe_
-
-── Bot Token ──
-(твой новый токен от BotFather)
+(из token.txt)
 
 ── Bot Username ──
-(юзернейм бота, без @)
+WildVFrobot
+
+(Токен бота теперь задаётся в коде Worker — константа BOT_TOKEN)
