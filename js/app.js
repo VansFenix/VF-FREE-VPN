@@ -75,18 +75,56 @@ function setCurrentUser(username) {
     localStorage.setItem('vf_current_user', username || '');
 }
 
-// ====== AVATAR DOWNLOAD ======
-async function downloadAvatar(photoUrl) {
-    if (!photoUrl || !TG_BOT_PROXY) return '';
-    try {
-        const r = await fetch(normalizeApiUrl() + '/api/avatar?url=' + encodeURIComponent(photoUrl));
-        const blob = await r.blob();
-        const reader = new FileReader();
-        return new Promise((resolve) => {
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        });
-    } catch { return ''; }
+// ====== AVATAR HELPERS ======
+function loadAvatarImage(username, photoUrl) {
+    const navImg = document.getElementById('nav-avatar-img');
+    const profImg = document.getElementById('profile-avatar-img');
+    const navText = document.getElementById('nav-avatar-text');
+    const profText = document.getElementById('profile-avatar-text');
+    const letter = username ? username.charAt(0).toUpperCase() : 'U';
+
+    function showLetter() {
+        if (navText) { navText.style.display = 'flex'; navText.textContent = letter; }
+        if (profText) { profText.style.display = 'flex'; profText.textContent = letter; }
+        if (navImg) navImg.style.display = 'none';
+        if (profImg) profImg.style.display = 'none';
+    }
+
+    if (!photoUrl) { showLetter(); return; }
+
+    // Try to load via canvas (needs CORS, may fail)
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 100; canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 100, 100);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            if (navImg) { navImg.src = dataUrl; navImg.style.display = 'block'; }
+            if (profImg) { profImg.src = dataUrl; profImg.style.display = 'block'; }
+            if (navText) navText.style.display = 'none';
+            if (profText) profText.style.display = 'none';
+            const u = getUsers();
+            if (u[username]) { u[username].avatarData = dataUrl; saveUsers(u); }
+            if (state.user) state.user.avatarData = dataUrl;
+        } catch {
+            // Canvas tainted - show direct URL
+            if (navImg) { navImg.src = photoUrl; navImg.style.display = 'block'; navImg.referrerPolicy = 'no-referrer'; }
+            if (profImg) { profImg.src = photoUrl; profImg.style.display = 'block'; profImg.referrerPolicy = 'no-referrer'; }
+            if (navText) navText.style.display = 'none';
+            if (profText) profText.style.display = 'none';
+        }
+    };
+    img.onerror = function() {
+        // Fall back to direct URL (in case CORS was the only issue)
+        if (navImg) { navImg.src = photoUrl; navImg.style.display = 'block'; navImg.referrerPolicy = 'no-referrer'; navImg.onerror = showLetter; }
+        if (profImg) { profImg.src = photoUrl; profImg.style.display = 'block'; profImg.referrerPolicy = 'no-referrer'; profImg.onerror = showLetter; }
+        if (navText) navText.style.display = 'none';
+        if (profText) profText.style.display = 'none';
+    };
+    img.src = photoUrl;
 }
 
 // ====== KV (WORKER) HELPERS ======
@@ -304,15 +342,9 @@ async function finalizeTgAuth() {
             hideAuth();
             updateUI();
             showToast(`С возвращением, ${username}!`, 'success');
-            // Download avatar in background
+            // Load avatar in background
             if (user.photo_url && !kvUser.avatarData) {
-                downloadAvatar(user.photo_url).then(dataUrl => {
-                    if (dataUrl) {
-                        const u = getUsers();
-                        if (u[username]) { u[username].avatarData = dataUrl; saveUsers(u); }
-                        if (state.user) { state.user.avatarData = dataUrl; setAvatar(username, user.photo_url, dataUrl); }
-                    }
-                }).catch(() => {});
+                loadAvatarImage(username, user.photo_url);
             }
             return;
         }
@@ -373,16 +405,9 @@ async function finalizeTgAuth() {
     updateUI();
     showToast(`Добро пожаловать, ${username}!`, 'success');
 
-    // Download avatar in background
+    // Load avatar in background
     if (user.photo_url) {
-        const currentUsername = username;
-        downloadAvatar(user.photo_url).then(dataUrl => {
-            if (dataUrl) {
-                const u = getUsers();
-                if (u[currentUsername]) { u[currentUsername].avatarData = dataUrl; saveUsers(u); }
-                if (state.user) { state.user.avatarData = dataUrl; setAvatar(currentUsername, user.photo_url, dataUrl); }
-            }
-        }).catch(() => {});
+        loadAvatarImage(username, user.photo_url);
     }
 }
 
@@ -398,27 +423,25 @@ function hideAuth() {
 
 // ====== AVATAR ======
 function setAvatar(username, photoUrl, avatarData) {
-    const setOnElements = () => {
-        const navText = document.getElementById('nav-avatar-text');
-        const navImg = document.getElementById('nav-avatar-img');
-        const profText = document.getElementById('profile-avatar-text');
-        const profImg = document.getElementById('profile-avatar-img');
+    const navText = document.getElementById('nav-avatar-text');
+    const navImg = document.getElementById('nav-avatar-img');
+    const profText = document.getElementById('profile-avatar-text');
+    const profImg = document.getElementById('profile-avatar-img');
 
-        const src = avatarData || photoUrl || '';
-        if (src) {
-            if (navText) navText.style.display = 'none';
-            if (navImg) { navImg.src = src; navImg.style.display = 'block'; }
-            if (profText) profText.style.display = 'none';
-            if (profImg) { profImg.src = src; profImg.style.display = 'block'; }
-        } else {
-            const letter = username ? username.charAt(0).toUpperCase() : 'U';
-            if (navText) { navText.style.display = 'flex'; navText.textContent = letter; }
-            if (navImg) navImg.style.display = 'none';
-            if (profText) { profText.style.display = 'flex'; profText.textContent = letter; }
-            if (profImg) profImg.style.display = 'none';
-        }
-    };
-    setOnElements();
+    if (avatarData) {
+        if (navText) navText.style.display = 'none';
+        if (navImg) { navImg.src = avatarData; navImg.style.display = 'block'; }
+        if (profText) profText.style.display = 'none';
+        if (profImg) { profImg.src = avatarData; profImg.style.display = 'block'; }
+    } else if (photoUrl) {
+        loadAvatarImage(username, photoUrl);
+    } else {
+        const letter = username ? username.charAt(0).toUpperCase() : 'U';
+        if (navText) { navText.style.display = 'flex'; navText.textContent = letter; }
+        if (navImg) navImg.style.display = 'none';
+        if (profText) { profText.style.display = 'flex'; profText.textContent = letter; }
+        if (profImg) profImg.style.display = 'none';
+    }
 }
 
 function handleAvatarUpload(input) {
@@ -1205,15 +1228,9 @@ function init() {
                     saveUsers(users);
                     state.user = kvUser;
                     updateUI();
-                    // Download avatar if missing
+                    // Load avatar if missing
                     if (kvUser.telegramPhoto && !kvUser.avatarData) {
-                        downloadAvatar(kvUser.telegramPhoto).then(dataUrl => {
-                            if (dataUrl) {
-                                const u = getUsers();
-                                if (u[saved.username]) { u[saved.username].avatarData = dataUrl; saveUsers(u); }
-                                if (state.user) { state.user.avatarData = dataUrl; setAvatar(saved.username, kvUser.telegramPhoto, dataUrl); }
-                            }
-                        }).catch(() => {});
+                        loadAvatarImage(saved.username, kvUser.telegramPhoto);
                     }
                 }).catch(() => {});
             }
