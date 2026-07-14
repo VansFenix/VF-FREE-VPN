@@ -89,8 +89,8 @@
                 <details style="margin-bottom: 12px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 12px; cursor: pointer;">
                     <summary style="font-size: 13px; font-weight: 600; color: var(--text-dim);"><i class="fab fa-telegram"></i> Настройки бота</summary>
                     <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-                        <input type="text" id="admin-bot-token" placeholder="Bot Token (токен от @BotFather)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
                         <input type="text" id="admin-bot-username" placeholder="Bot Username (без @)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:-4px;">Токен бота теперь задаётся в коде Worker (константа BOT_TOKEN)</div>
                         <input type="text" id="admin-bot-proxy" placeholder="Proxy URL (https://твой-воркер.workers.dev)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">
                         <div style="font-size:11px;color:var(--text-muted);margin-top:-4px;">Cloudflare Worker для проксирования Telegram API (обходит CORS)</div>
                         <input type="password" id="admin-api-key" placeholder="API Key (из WORKER_CODE.txt)" style="padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text); font-size: 12px; outline: none;">

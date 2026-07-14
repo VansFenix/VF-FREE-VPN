@@ -1,0 +1,13 @@
+ВВЕСТИ В АДМИН-ПАНЕЛИ (Настройки бота):
+
+── Proxy URL ──
+https://shrill-bread-89de.nfajih.workers.dev
+
+── API Key ──
+sk-f82zQ%DOoc=HrYGXK3nwPjuv@B6tMe_
+
+── Bot Token ──
+(твой новый токен от BotFather)
+
+── Bot Username ──
+(юзернейм бота, без @)

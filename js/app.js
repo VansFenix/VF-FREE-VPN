@@ -17,6 +17,18 @@ let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || '';
 let TG_BOT_PROXY = (localStorage.getItem('vf_bot_proxy') || '').replace(/^[a-zA-Z]+:\/\//, '');
 if (TG_BOT_PROXY) TG_BOT_PROXY = 'https://' + TG_BOT_PROXY;
 
+async function fetchBotConfig() {
+    const proxy = TG_BOT_PROXY;
+    if (!proxy) return;
+    try {
+        const r = await fetch(proxy + '/api/config');
+        const data = await r.json();
+        if (data.ok && data.botUsername) {
+            TG_BOT_USERNAME = data.botUsername;
+        }
+    } catch {}
+}
+
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
 const VLESS_CONFIGS = {
     WVFSTANDART: 'https://hub.mos.ru/nfajih/wildvf/-/raw/main/WVFSTANDART',
@@ -600,18 +612,15 @@ function copyConfig(name) {
 // ====== ADMIN PANEL ======
 let adminClickCount = 0;
 function loadBotSettingsUI() {
-    const token = document.getElementById('admin-bot-token');
     const username = document.getElementById('admin-bot-username');
     const proxy = document.getElementById('admin-bot-proxy');
     const apiKey = document.getElementById('admin-api-key');
-    if (token) token.value = TG_BOT_TOKEN;
     if (username) username.value = TG_BOT_USERNAME;
     if (proxy) proxy.value = localStorage.getItem('vf_bot_proxy') || '';
     if (apiKey) apiKey.value = localStorage.getItem('vf_api_key') || '';
 }
 
 function saveBotSettings() {
-    const token = document.getElementById('admin-bot-token').value.trim();
     const username = document.getElementById('admin-bot-username').value.trim().replace('@', '');
     let proxy = document.getElementById('admin-bot-proxy').value.trim().replace(/\/+$/, '');
     const apiKey = document.getElementById('admin-api-key').value.trim();
@@ -619,11 +628,9 @@ function saveBotSettings() {
         proxy = proxy.replace(/^[a-zA-Z]+:\/\//, '');
         proxy = 'https://' + proxy;
     }
-    localStorage.setItem('vf_bot_token', token);
     localStorage.setItem('vf_bot_username', username);
     localStorage.setItem('vf_bot_proxy', proxy);
     localStorage.setItem('vf_api_key', apiKey);
-    TG_BOT_TOKEN = token;
     TG_BOT_USERNAME = username;
     TG_BOT_PROXY = proxy;
     document.getElementById('bot-save-status').textContent = '✅ Сохранено!';
@@ -772,22 +779,12 @@ function getBotApiBase() {
     return TG_BOT_PROXY;
 }
 
-function checkSubscription() {
+async function checkSubscription() {
     const btn = document.getElementById('verify-btn');
     const status = document.getElementById('verify-status');
 
-    if (!TG_BOT_TOKEN) {
-        status.textContent = '❌ Бот не настроен. Администратор должен указать токен бота в админ-панели.';
-        status.className = 'verify-status error';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
-        btn.onclick = verifySubscription;
-        showToast('❌ Невозможно проверить подписку: бот не настроен', 'error');
-        return;
-    }
-
-    if (TG_BOT_TOKEN && !TG_BOT_PROXY) {
-        status.textContent = '❌ Не указан Proxy URL. Администратор должен настроить Cloudflare Worker для обхода CORS.';
+    if (!TG_BOT_PROXY) {
+        status.textContent = '❌ Не указан Proxy URL. Администратор должен настроить Cloudflare Worker.';
         status.className = 'verify-status error';
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync-alt"></i> Попробовать снова';
@@ -810,9 +807,6 @@ function checkSubscription() {
     status.textContent = '⏳ Проверяем подписку...';
     status.className = 'verify-status loading';
 
-    const apiBase = getBotApiBase();
-    const url = `${apiBase}/bot${TG_BOT_TOKEN}/getChatMember?chat_id=@${TG_CHANNEL}&user_id=${state.user.telegramId}`;
-
     function showError(msg) {
         btn.disabled = false;
         status.textContent = msg;
@@ -821,29 +815,23 @@ function checkSubscription() {
         btn.onclick = checkSubscription;
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-    fetch(url, { signal: controller.signal })
-        .then(r => r.json())
-        .then(data => {
-            clearTimeout(timeoutId);
-            btn.disabled = false;
-            if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
-                confirmSub();
-            } else {
-                showError('❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова');
-            }
-        })
-        .catch((err) => {
-            clearTimeout(timeoutId);
-            if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-                showError('❌ Тайм-аут подключения к Telegram API. Возможно сервер заблокирован в вашем регионе.');
-                showToast('❌ Тайм-аут. Попробуйте через VPN или смените Proxy URL', 'error');
-            } else {
-                showError('❌ Не удалось подключиться к Telegram API. Возможно Proxy URL (' + TG_BOT_PROXY + ') заблокирован в вашем регионе.');
-                showToast('❌ Ошибка подключения. Попробуйте через VPN или настройте свой домен для Worker', 'error');
-            }
+    try {
+        const r = await fetch(normalizeApiUrl() + '/api/check-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: state.user.telegramId, channel: TG_CHANNEL })
         });
+        const data = await r.json();
+        btn.disabled = false;
+        if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
+            confirmSub();
+        } else {
+            showError('❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова');
+        }
+    } catch (err) {
+        showError('❌ Ошибка подключения к серверу. Проверьте Proxy URL.');
+        showToast('❌ Ошибка подключения к Worker', 'error');
+    }
 }
 
 function verifySubscription() {
@@ -1145,7 +1133,7 @@ function initTyping() {
 }
 
 // ====== INIT ======
-function init() {
+async function init() {
     // Hide preloader
     const preloader = document.getElementById('preloader');
     if (preloader) {
@@ -1192,6 +1180,12 @@ function init() {
     if (!state.user) {
         showAuth();
     }
+
+    fetchBotConfig().then(() => {
+        if (!state.user) {
+            loadTelegramWidget();
+        }
+    });
 
     // Avatar upload
     document.getElementById('avatar-upload-input').addEventListener('change', function() {
