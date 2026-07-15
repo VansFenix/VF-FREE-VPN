@@ -1,10 +1,1 @@
-Tracking Prevention blocked access to storage for https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css.
-VF-FREE-VPN/#subs:1 Tracking Prevention blocked access to storage for https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css.
-VF-FREE-VPN/#subs:1 Tracking Prevention blocked access to storage for https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css.
-VF-FREE-VPN/#subs:1 Tracking Prevention blocked access to storage for https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css.
-VF-FREE-VPN/#subs:1 Access to image at 'https://t.me/i/userpic/320/qEq-4z7hQ2yAgXnIHZyp7ILv1qQ2x9gbheEaFrCNm-s.jpg' from origin 'https://vansfenix.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-qEq-4z7hQ2yAgXnIHZyp7ILv1qQ2x9gbheEaFrCNm-s.jpg:1  Failed to load resource: net::ERR_FAILED
-VF-FREE-VPN/#subs:1 Access to image at 'https://t.me/i/userpic/320/qEq-4z7hQ2yAgXnIHZyp7ILv1qQ2x9gbheEaFrCNm-s.jpg' from origin 'https://vansfenix.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-qEq-4z7hQ2yAgXnIHZyp7ILv1qQ2x9gbheEaFrCNm-s.jpg:1  Failed to load resource: net::ERR_FAILED
-VF-FREE-VPN/#subs:1 Access to image at 'https://t.me/i/userpic/320/qEq-4z7hQ2yAgXnIHZyp7ILv1qQ2x9gbheEaFrCNm-s.jpg' from origin 'https://vansfenix.github.io' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-qEq-4z7hQ2yAgXnIHZyp7ILv1qQ2x9gbheEaFrCNm-s.jpg:1  Failed to load resource: net::ERR_FAILED
+
