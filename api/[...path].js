@@ -70,7 +70,8 @@ export default async function handler(req, res) {
         headers: {
             host: req.headers.host,
             origin: req.headers.origin
-        }
+        },
+        catchAllArray: Array.isArray(req.query['...path']) ? req.query['...path'] : (req.query['...path'] ? [req.query['...path']] : [])
     };
 
     try {
@@ -85,7 +86,8 @@ export default async function handler(req, res) {
         return json(res, debugInfo);
     }
 
-    const pathname = '/' + (req.query.path || []).join('/');
+    const catchAllPath = Array.isArray(req.query['...path']) ? req.query['...path'] : (req.query['...path'] ? [req.query['...path']] : []);
+    const pathname = '/' + catchAllPath.join('/');
     let urlEndpoint = '';
     try {
         urlEndpoint = new URL(req.url, 'http://x').pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
