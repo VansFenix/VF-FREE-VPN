@@ -100,6 +100,19 @@
                     </div>
                 </details>
 
+                <div id="admin-kv-section" style="margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);">
+                    <div id="admin-kv-fields">
+                        <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">☁️ Подключение к Cloudflare KV (для загрузки всех пользователей)</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input type="text" id="admin-login-input" placeholder="Admin Login" style="flex:1;min-width:120px;padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 12px; outline: none;">
+                            <input type="password" id="admin-password-input" placeholder="Admin Password" style="flex:1;min-width:120px;padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 12px; outline: none;">
+                            <button class="btn-hero secondary" style="padding: 8px 16px; font-size: 11px;" onclick="adminAuthenticate()">🔑 Подключиться</button>
+                        </div>
+                        <div id="admin-kv-error" style="color: #ff2d7b; font-size: 11px; display: none; margin-top: 4px;"></div>
+                    </div>
+                    <div id="admin-kv-status" class="hidden" style="font-size: 12px; color: var(--success);"></div>
+                </div>
+
                 <div style="max-height: 360px; overflow-y: auto;" id="admin-user-list"></div>
 
                 <div style="margin-top: 16px; padding: 16px; background: rgba(255,45,123,0.04); border: 1px solid rgba(255,45,123,0.1); border-radius: var(--radius-sm); text-align: center;">
@@ -311,6 +324,13 @@
             <br>
             <button class="channel-verify" id="verify-btn"><i class="fas fa-check-circle"></i> Я подписался, проверить</button>
             <div class="verify-status" id="verify-status"></div>
+            <div id="manual-tgid-section" class="hidden" style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);">
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">📝 Вход без Telegram? Введите ваш Telegram ID (число):</p>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="manual-tgid-input" placeholder="Ваш Telegram ID" style="flex:1; padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text); font-size: 12px; outline: none;">
+                    <button class="btn-hero secondary" style="padding: 8px 16px; font-size: 11px;" onclick="saveManualTgId()">💾 Сохранить</button>
+                </div>
+            </div>
         </div>
     </section>
 

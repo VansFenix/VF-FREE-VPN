@@ -27,7 +27,7 @@ async function fetchBotConfig() {
         if (data.ok && data.botUsername) {
             TG_BOT_USERNAME = data.botUsername;
         }
-    } catch {}
+    } catch (e) { console.error('fetchBotConfig failed:', e); }
 }
 
 // ====== VLESS SUBSCRIPTION LINKS (INCY / Happ) ======
@@ -155,7 +155,7 @@ async function fetchUserFromKV(username) {
         });
         const data = await r.json();
         return data.ok && data.user ? data.user : null;
-    } catch { return null; }
+    } catch (e) { console.error('fetchUserFromKV failed:', e); return null; }
 }
 
 async function saveUserToKV(username, userData) {
@@ -168,7 +168,7 @@ async function saveUserToKV(username, userData) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, data: userData, apiKey })
         });
-    } catch {}
+    } catch (e) { console.error('saveUserToKV failed:', e); }
 }
 
 // ====== SECURITY: HTML escape ======
@@ -648,9 +648,23 @@ function openAdminPanel() {
         if (state.user && (state.user.telegramId == CREATOR_TG_ID || state.user.username === CREATOR_USERNAME)) {
             document.getElementById('admin-overlay').classList.remove('hidden');
             document.getElementById('admin-panel-area').classList.remove('hidden');
+            loadBotSettingsUI();
+
+            // Восстанавливаем сохранённые admin credentials
+            const savedLogin = localStorage.getItem('vf_admin_login');
+            const savedPassword = localStorage.getItem('vf_admin_password');
+            if (savedLogin && savedPassword && !state.adminLogin) {
+                state.adminLogin = savedLogin;
+                state.adminPassword = savedPassword;
+                document.getElementById('admin-kv-fields').classList.add('hidden');
+                document.getElementById('admin-kv-status').classList.remove('hidden');
+                document.getElementById('admin-kv-status').innerHTML = '✅ Подключено к KV как <strong>' + escapeHtml(savedLogin) + '</strong>';
+                document.getElementById('admin-login-input').value = savedLogin;
+                document.getElementById('admin-password-input').value = savedPassword;
+            }
+
             renderAdminUsers();
             showToast('✅ Добро пожаловать в админ-панель', 'success');
-            loadBotSettingsUI();
         } else {
             showToast('❌ Только @vansFenix может открыть админ-панель', 'error');
         }
@@ -664,8 +678,51 @@ function closeAdmin() {
 function adminLogout() {
     state.adminLogin = '';
     state.adminPassword = '';
+    localStorage.removeItem('vf_admin_login');
+    localStorage.removeItem('vf_admin_password');
+    document.getElementById('admin-kv-status').classList.add('hidden');
+    document.getElementById('admin-kv-fields').classList.remove('hidden');
     document.getElementById('admin-panel-area').classList.add('hidden');
     showToast('Вы вышли из админ-панели', 'info');
+}
+
+async function adminAuthenticate() {
+    const login = document.getElementById('admin-login-input').value.trim();
+    const password = document.getElementById('admin-password-input').value.trim();
+    const errorEl = document.getElementById('admin-kv-error');
+    errorEl.style.display = 'none';
+    if (!login || !password) {
+        errorEl.textContent = '❌ Введите логин и пароль';
+        errorEl.style.display = 'block';
+        return;
+    }
+    const apiUrl = normalizeApiUrl();
+    try {
+        const r = await fetch(apiUrl + '/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ login, password })
+        });
+        const data = await r.json();
+        if (data.ok) {
+            state.adminLogin = login;
+            state.adminPassword = password;
+            localStorage.setItem('vf_admin_login', login);
+            localStorage.setItem('vf_admin_password', password);
+            document.getElementById('admin-kv-fields').classList.add('hidden');
+            document.getElementById('admin-kv-status').classList.remove('hidden');
+            document.getElementById('admin-kv-status').innerHTML = '✅ Подключено к KV как <strong>' + escapeHtml(login) + '</strong>';
+            showToast('✅ Подключено к Cloudflare KV', 'success');
+            renderAdminUsers();
+        } else {
+            errorEl.textContent = '❌ Неверный логин или пароль';
+            errorEl.style.display = 'block';
+        }
+    } catch (e) {
+        console.error('adminAuthenticate failed:', e);
+        errorEl.textContent = '❌ Ошибка подключения к серверу';
+        errorEl.style.display = 'block';
+    }
 }
 
 function renderAdminUsers() {
@@ -736,18 +793,35 @@ function renderAdminUsers() {
             } else {
                 render(getUsers());
             }
-        } catch {
+        } catch (e) {
+            console.error('loadFromKV failed:', e);
             render(getUsers());
         }
     }
     loadFromKV();
 }
 
-function toggleBlockUser(username) {
+async function toggleBlockUser(username) {
     const users = getUsers();
     if (!users[username]) return;
     users[username].blocked = !users[username].blocked;
     saveUsers(users);
+
+    // Sync to KV if authenticated as admin
+    if (state.adminLogin) {
+        try {
+            await fetch(normalizeApiUrl() + '/api/user/block', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    login: state.adminLogin,
+                    password: state.adminPassword,
+                    username,
+                    blocked: users[username].blocked
+                })
+            });
+        } catch (e) { console.error('toggleBlockUser KV sync failed:', e); }
+    }
 
     if (state.user && state.user.username === username && users[username].blocked) {
         showToast('❌ Ваш аккаунт заблокирован администратором', 'error');
@@ -863,6 +937,14 @@ function verifySubscription() {
         return;
     }
 
+    // Если нет Telegram ID — показываем поле для ручного ввода
+    if (!state.user.telegramId) {
+        document.getElementById('manual-tgid-section').classList.remove('hidden');
+        document.getElementById('verify-status').textContent = '📝 Введите ваш Telegram ID для проверки подписки';
+        document.getElementById('verify-status').className = 'verify-status';
+        return;
+    }
+
     window.open(TG_CHANNEL_LINK, '_blank');
 
     const status = document.getElementById('verify-status');
@@ -871,6 +953,27 @@ function verifySubscription() {
     const btn = document.getElementById('verify-btn');
     btn.innerHTML = '<i class="fas fa-sync-alt"></i> Проверить подписку';
     btn.onclick = checkSubscription;
+}
+
+function saveManualTgId() {
+    const input = document.getElementById('manual-tgid-input');
+    const id = input.value.trim();
+    if (!id || !/^\d+$/.test(id)) {
+        showToast('❌ Введите числовой Telegram ID', 'error');
+        return;
+    }
+    if (!state.user) return;
+    state.user.telegramId = id;
+    const users = getUsers();
+    if (users[state.user.username]) {
+        users[state.user.username].telegramId = id;
+        saveUsers(users);
+    }
+    document.getElementById('manual-tgid-section').classList.add('hidden');
+    input.value = '';
+    showToast('✅ Telegram ID сохранён. Теперь нажмите "Проверить"', 'success');
+    // Запускаем проверку
+    verifySubscription();
 }
 
 function confirmSub() {
@@ -1195,7 +1298,7 @@ async function init() {
                     if (kvUser.telegramPhoto && !kvUser.avatarData) {
                         loadAvatarImage(saved.username, kvUser.telegramPhoto);
                     }
-                }).catch(() => {});
+                }).catch(e => { console.error('init KV fetch failed:', e); });
             }
         }
     }
