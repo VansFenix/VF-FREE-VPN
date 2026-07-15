@@ -309,7 +309,8 @@ async function manualLogin() {
             referredBy: '',
             referralCount: 0,
             referralCode: username + Math.random().toString(36).slice(2, 6).toUpperCase(),
-            blocked: false
+            blocked: false,
+            subscribed: false
         };
         users[username] = newUser;
         state.user = newUser;
@@ -406,7 +407,8 @@ async function finalizeTgAuth() {
             referredBy: '',
             referralCount: 0,
             referralCode: username + Math.random().toString(36).slice(2, 6).toUpperCase(),
-            blocked: false
+            blocked: false,
+            subscribed: false
         };
 
         if (refCode) {
@@ -684,9 +686,11 @@ function renderAdminUsers() {
             const gamesPlayed = parseInt(data.gamesPlayed) || 0;
             const referralCount = parseInt(data.referralCount) || 0;
             const isBlocked = data.blocked === true;
+            const isSubscribed = data.subscribed === true;
             const lastSeen = data.lastActive ? escapeHtml(formatDate(data.lastActive)) : 'никогда';
             const status = isBlocked ? 'blocked' : (data.lastActive ? 'active' : 'offline');
             const statusLabel = isBlocked ? '🔴 Заблокирован' : (data.lastActive ? '🟢 Активен' : '⚪ Неактивен');
+            const subLabel = isSubscribed ? '✅ Подписан' : '❌ Не подписан';
             const btnText = isBlocked ? '✅ Разблокировать' : '🔨 Блокировать';
             const btnClass = isBlocked ? 'admin-block-btn blocked' : 'admin-block-btn';
             const safeJsUsername = username.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -700,8 +704,9 @@ function renderAdminUsers() {
                             <div class="admin-user-meta">🪙 ${coins} · 🎮 ${gamesPlayed} игр · ${referralCount} реф · Последний раз: ${lastSeen}</div>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <span class="admin-user-status ${status}">${statusLabel}</span>
+                        <span class="admin-user-status ${isSubscribed ? 'active' : 'offline'}" style="font-size:10px;">${subLabel}</span>
                         <button class="${btnClass}" onclick="toggleBlockUser('${safeJsUsername}')">${btnText}</button>
                     </div>
                 </div>
@@ -765,6 +770,14 @@ function resetAllSubscriptions() {
             count++;
         }
     }
+    const users = getUsers();
+    for (const username in users) {
+        if (users[username].subscribed) {
+            delete users[username].subscribed;
+            count++;
+        }
+    }
+    saveUsers(users);
     if (state.user) {
         setSubscribed(false);
         updateUI();
@@ -782,7 +795,8 @@ async function checkSubscription() {
     const btn = document.getElementById('verify-btn');
     const status = document.getElementById('verify-status');
 
-    if (!TG_BOT_PROXY) {
+    const apiUrl = normalizeApiUrl();
+    if (!apiUrl) {
         status.textContent = '❌ Не указан Proxy URL. Администратор должен настроить Cloudflare Worker.';
         status.className = 'verify-status error';
         btn.disabled = false;
@@ -815,7 +829,7 @@ async function checkSubscription() {
     }
 
     try {
-        const r = await fetch(normalizeApiUrl() + '/api/check-subscription', {
+        const r = await fetch(apiUrl + '/api/check-subscription', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: state.user.telegramId, channel: TG_CHANNEL })
@@ -825,7 +839,8 @@ async function checkSubscription() {
         if (data.ok && data.result && ['member', 'administrator', 'creator'].includes(data.result.status)) {
             confirmSub();
         } else {
-            showError('❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова');
+            const errorDetail = data.description ? ` (${data.description})` : '';
+            showError('❌ Вы не подписаны на канал @' + TG_CHANNEL + '. Подпишитесь и попробуйте снова' + errorDetail);
         }
     } catch (err) {
         showError('❌ Ошибка подключения к серверу. Проверьте Proxy URL.');
@@ -859,6 +874,14 @@ function verifySubscription() {
 
 function confirmSub() {
     setSubscribed(true);
+    if (state.user) {
+        state.user.subscribed = true;
+        const users = getUsers();
+        if (users[state.user.username]) {
+            users[state.user.username].subscribed = true;
+            saveUsers(users);
+        }
+    }
     const status = document.getElementById('verify-status');
     status.textContent = '✅ Подписка подтверждена! Спасибо!';
     status.className = 'verify-status success';
