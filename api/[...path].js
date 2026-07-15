@@ -64,8 +64,11 @@ export default async function handler(req, res) {
 
     const pathname = '/' + (req.query.path || []).join('/');
 
+    console.log('VF_HANDLER pathname:', pathname, 'query:', JSON.stringify(req.query), 'url:', req.url);
+
     try {
         if (pathname === '/' || pathname === '/status') {
+            console.log('VF_HANDLER: returning root/status response');
             return json(res, { ok: true, message: 'VF API работает' });
         }
 
@@ -76,7 +79,8 @@ export default async function handler(req, res) {
         }
 
         if (pathname === '/config' && req.method === 'GET') {
-            return json(res, { ok: true, botUsername: BOT_USERNAME });
+            console.log('VF_HANDLER: returning config response, BOT_USERNAME:', BOT_USERNAME);
+            return json(res, { ok: true, botUsername: BOT_USERNAME, pathname, env: !!BOT_USERNAME });
         }
 
         if (pathname === '/user/get' && req.method === 'POST') {
@@ -154,8 +158,10 @@ export default async function handler(req, res) {
             return json(res, data, response.status);
         }
 
-        return json(res, { ok: true, message: 'VF API работает' });
+        console.log('VF_HANDLER: falling through to default, pathname:', pathname);
+        return json(res, { ok: true, message: 'VF API работает', pathname, query: req.query });
     } catch (e) {
+        console.log('VF_HANDLER: ERROR:', e.message, e.stack);
         return json(res, { ok: false, error: e.message }, 500);
     }
 }
