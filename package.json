@@ -1,0 +1,8 @@
+{
+    "name": "vf-free-vpn-api",
+    "version": "1.0.0",
+    "description": "VF FREE VPN API на Vercel Serverless Functions",
+    "scripts": {
+        "dev": "vercel dev"
+    }
+}

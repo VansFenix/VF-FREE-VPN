@@ -13,14 +13,15 @@ const CREATOR_TG_ID = 1243980540;
 const CREATOR_USERNAME = 'vansFenix';
 
 const DEFAULT_BOT_USERNAME = 'wvfrobot';
-const DEFAULT_PROXY = 'https://shrill-bread-89de.nfajih.workers.dev';
+const DEFAULT_PROXY = ''; // Задаётся в админ-панели или автовыбором
 
 let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || DEFAULT_BOT_USERNAME;
 let TG_BOT_PROXY = (localStorage.getItem('vf_bot_proxy') || '').replace(/^[a-zA-Z]+:\/\//, '');
 if (TG_BOT_PROXY) TG_BOT_PROXY = 'https://' + TG_BOT_PROXY;
 
 async function fetchBotConfig() {
-    const proxy = TG_BOT_PROXY || DEFAULT_PROXY;
+    const proxy = normalizeApiUrl();
+    if (!proxy) return;
     try {
         const r = await fetch(proxy + '/api/config');
         const data = await r.json();
@@ -69,7 +70,12 @@ function saveUsers(users) {
 }
 
 function normalizeApiUrl() {
-    return TG_BOT_PROXY || DEFAULT_PROXY;
+    if (TG_BOT_PROXY) return TG_BOT_PROXY;
+    // На Vercel API на том же домене (endpoints сами добавляют /api/)
+    if (window.location.origin && !window.location.origin.includes('github.io') && !window.location.origin.includes('127.0.0.1') && !window.location.origin.includes('localhost')) {
+        return window.location.origin;
+    }
+    return '';
 }
 
 function getCurrentUser() {
@@ -144,11 +150,12 @@ function getApiKey() {
 
 // ====== KV (WORKER) HELPERS ======
 async function fetchUserFromKV(username) {
-    if (!TG_BOT_PROXY) return null;
+    const apiUrl = normalizeApiUrl();
+    if (!apiUrl) return null;
     const apiKey = getApiKey();
     if (!apiKey) return null;
     try {
-        const r = await fetch(normalizeApiUrl() + '/api/user/get', {
+        const r = await fetch(apiUrl + '/api/user/get', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, apiKey })
@@ -159,11 +166,12 @@ async function fetchUserFromKV(username) {
 }
 
 async function saveUserToKV(username, userData) {
-    if (!TG_BOT_PROXY) return;
+    const apiUrl = normalizeApiUrl();
+    if (!apiUrl) return;
     const apiKey = getApiKey();
     if (!apiKey) return;
     try {
-        await fetch(normalizeApiUrl() + '/api/user/sync', {
+        await fetch(apiUrl + '/api/user/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, data: userData, apiKey })
@@ -269,8 +277,7 @@ async function manualLogin() {
         return;
     }
 
-    // Try KV first
-    if (TG_BOT_PROXY) {
+    if (normalizeApiUrl()) {
         const kvUser = await fetchUserFromKV(username);
         if (kvUser) {
             if (kvUser.blocked) {
@@ -288,8 +295,6 @@ async function manualLogin() {
             return;
         }
     }
-
-    // Local fallback or new user
     if (users[username]) {
         users[username].lastActive = new Date().toISOString();
         state.user = users[username];
@@ -354,8 +359,7 @@ async function finalizeTgAuth() {
         return;
     }
 
-    // Try KV first
-    if (TG_BOT_PROXY) {
+    if (normalizeApiUrl()) {
         const kvUser = await fetchUserFromKV(username);
         if (kvUser) {
             if (kvUser.blocked) {
@@ -1281,7 +1285,7 @@ async function init() {
             hideAuth();
             updateUI();
             // Refresh from KV in background
-            if (TG_BOT_PROXY && saved.username) {
+            if (normalizeApiUrl() && saved.username) {
                 fetchUserFromKV(saved.username).then(kvUser => {
                     if (!kvUser) return;
                     if (kvUser.blocked) {
