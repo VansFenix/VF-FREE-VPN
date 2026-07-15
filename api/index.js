@@ -64,7 +64,7 @@ export default async function handler(req, res) {
 
     let urlEndpoint = '';
     try {
-        urlEndpoint = new URL(req.url, 'http://x').pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
+        urlEndpoint = new URL(req.url, 'http://x').pathname.replace(/\/+$/, '').replace(/^\/api\//, '').replace(/^\//, '');
     } catch (e) {
         urlEndpoint = '';
     }
