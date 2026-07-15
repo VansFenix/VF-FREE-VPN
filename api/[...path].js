@@ -75,11 +75,11 @@ export default async function handler(req, res) {
             return json(res, { ok });
         }
 
-        if (pathname === '/api/config' && req.method === 'GET') {
+        if (pathname === '/config' && req.method === 'GET') {
             return json(res, { ok: true, botUsername: BOT_USERNAME });
         }
 
-        if (pathname === '/api/user/get' && req.method === 'POST') {
+        if (pathname === '/user/get' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.apiKey !== API_KEY) {
                 return json(res, { ok: false, error: 'forbidden' }, 403);
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true, user: raw ? JSON.parse(raw) : null });
         }
 
-        if (pathname === '/api/user/sync' && req.method === 'POST') {
+        if (pathname === '/user/sync' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.apiKey !== API_KEY) {
                 return json(res, { ok: false, error: 'forbidden' }, 403);
@@ -106,7 +106,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true });
         }
 
-        if (pathname === '/api/users/list' && req.method === 'POST') {
+        if (pathname === '/users/list' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.login !== ADMIN_LOGIN || body.password !== ADMIN_PASSWORD) {
                 return json(res, { ok: false, error: 'unauthorized' }, 403);
@@ -120,7 +120,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true, users });
         }
 
-        if (pathname === '/api/user/block' && req.method === 'POST') {
+        if (pathname === '/user/block' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.login !== ADMIN_LOGIN || body.password !== ADMIN_PASSWORD) {
                 return json(res, { ok: false, error: 'unauthorized' }, 403);
@@ -139,7 +139,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true });
         }
 
-        if (pathname === '/api/check-subscription' && req.method === 'POST') {
+        if (pathname === '/check-subscription' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.apiKey !== API_KEY) {
                 return json(res, { ok: false, error: 'forbidden' }, 403);
@@ -152,10 +152,6 @@ export default async function handler(req, res) {
             const response = await fetch(tgUrl);
             const data = await response.json();
             return json(res, data, response.status);
-        }
-
-        if (pathname.startsWith('/api/')) {
-            return json(res, { ok: false, error: 'unknown endpoint' }, 404);
         }
 
         return json(res, { ok: true, message: 'VF API работает' });
