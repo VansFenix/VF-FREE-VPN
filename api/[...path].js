@@ -62,8 +62,36 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
+    const debugInfo = {
+        url: req.url,
+        query: req.query,
+        pathnameAttempt: '/' + (req.query.path || []).join('/'),
+        method: req.method,
+        headers: {
+            host: req.headers.host,
+            origin: req.headers.origin
+        }
+    };
+
+    try {
+        const urlParse = new URL(req.url, 'http://x');
+        debugInfo.urlPath = urlParse.pathname;
+        debugInfo.urlEndpoint = urlParse.pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
+    } catch (e) {
+        debugInfo.urlError = e.message;
+    }
+
+    if (req.method === 'GET' && req.url.includes('debug')) {
+        return json(res, debugInfo);
+    }
+
     const pathname = '/' + (req.query.path || []).join('/');
-    const urlEndpoint = new URL(req.url, 'http://x').pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
+    let urlEndpoint = '';
+    try {
+        urlEndpoint = new URL(req.url, 'http://x').pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
+    } catch (e) {
+        urlEndpoint = '';
+    }
 
     try {
         if (pathname === '/' || pathname === '/status' || urlEndpoint === '' || urlEndpoint === 'status') {
