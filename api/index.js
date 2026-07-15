@@ -62,32 +62,6 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const debugInfo = {
-        url: req.url,
-        query: req.query,
-        pathnameAttempt: '/' + (req.query.path || []).join('/'),
-        method: req.method,
-        headers: {
-            host: req.headers.host,
-            origin: req.headers.origin
-        },
-        catchAllArray: Array.isArray(req.query['...path']) ? req.query['...path'] : (req.query['...path'] ? [req.query['...path']] : [])
-    };
-
-    try {
-        const urlParse = new URL(req.url, 'http://x');
-        debugInfo.urlPath = urlParse.pathname;
-        debugInfo.urlEndpoint = urlParse.pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
-    } catch (e) {
-        debugInfo.urlError = e.message;
-    }
-
-    if (req.method === 'GET' && req.url.includes('debug')) {
-        return json(res, debugInfo);
-    }
-
-    const catchAllPath = Array.isArray(req.query['...path']) ? req.query['...path'] : (req.query['...path'] ? [req.query['...path']] : []);
-    const pathname = '/' + catchAllPath.join('/');
     let urlEndpoint = '';
     try {
         urlEndpoint = new URL(req.url, 'http://x').pathname.replace(/\/+$/, '').replace(/^\/api\//, '');
@@ -95,22 +69,26 @@ export default async function handler(req, res) {
         urlEndpoint = '';
     }
 
+    if (req.method === 'GET' && req.url.includes('debug')) {
+        return json(res, { url: req.url, endpoint: urlEndpoint, query: req.query, method: req.method, upstash: !!UPSTASH_URL, bot: !!BOT_TOKEN, apiKey: !!API_KEY });
+    }
+
     try {
-        if (pathname === '/' || pathname === '/status' || urlEndpoint === '' || urlEndpoint === 'status') {
+        if (urlEndpoint === '' || urlEndpoint === 'status') {
             return json(res, { ok: true, message: 'VF API работает' });
         }
 
-        if ((pathname === '/admin/login' || urlEndpoint === 'admin/login') && req.method === 'POST') {
+        if (urlEndpoint === 'admin/login' && req.method === 'POST') {
             const body = await parseBody(req);
             const ok = body.login === ADMIN_LOGIN && body.password === ADMIN_PASSWORD;
             return json(res, { ok });
         }
 
-        if ((pathname === '/config' || urlEndpoint === 'config') && req.method === 'GET') {
+        if (urlEndpoint === 'config' && req.method === 'GET') {
             return json(res, { ok: true, botUsername: BOT_USERNAME });
         }
 
-        if ((pathname === '/user/get' || urlEndpoint === 'user/get') && req.method === 'POST') {
+        if (urlEndpoint === 'user/get' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.apiKey !== API_KEY) {
                 return json(res, { ok: false, error: 'forbidden' }, 403);
@@ -119,7 +97,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true, user: raw ? JSON.parse(raw) : null });
         }
 
-        if ((pathname === '/user/sync' || urlEndpoint === 'user/sync') && req.method === 'POST') {
+        if (urlEndpoint === 'user/sync' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.apiKey !== API_KEY) {
                 return json(res, { ok: false, error: 'forbidden' }, 403);
@@ -137,7 +115,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true });
         }
 
-        if ((pathname === '/users/list' || urlEndpoint === 'users/list') && req.method === 'POST') {
+        if (urlEndpoint === 'users/list' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.login !== ADMIN_LOGIN || body.password !== ADMIN_PASSWORD) {
                 return json(res, { ok: false, error: 'unauthorized' }, 403);
@@ -151,7 +129,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true, users });
         }
 
-        if ((pathname === '/user/block' || urlEndpoint === 'user/block') && req.method === 'POST') {
+        if (urlEndpoint === 'user/block' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.login !== ADMIN_LOGIN || body.password !== ADMIN_PASSWORD) {
                 return json(res, { ok: false, error: 'unauthorized' }, 403);
@@ -170,7 +148,7 @@ export default async function handler(req, res) {
             return json(res, { ok: true });
         }
 
-        if ((pathname === '/check-subscription' || urlEndpoint === 'check-subscription') && req.method === 'POST') {
+        if (urlEndpoint === 'check-subscription' && req.method === 'POST') {
             const body = await parseBody(req);
             if (body.apiKey !== API_KEY) {
                 return json(res, { ok: false, error: 'forbidden' }, 403);
@@ -185,7 +163,7 @@ export default async function handler(req, res) {
             return json(res, data, response.status);
         }
 
-        return json(res, { ok: true, message: 'VF API работает', url: req.url, pathname, urlEndpoint });
+        return json(res, { ok: true, message: 'VF API работает', url: req.url, endpoint: urlEndpoint });
     } catch (e) {
         return json(res, { ok: false, error: e.message }, 500);
     }

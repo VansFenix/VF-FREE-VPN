@@ -1,7 +1,11 @@
 {
     "version": 2,
+    "rewrites": [
+        { "source": "/api/(.*)", "destination": "/api/index" },
+        { "source": "/admin/login", "destination": "/api/index" }
+    ],
     "functions": {
-        "api/[...path].js": {
+        "api/index.js": {
             "maxDuration": 10
         }
     }
