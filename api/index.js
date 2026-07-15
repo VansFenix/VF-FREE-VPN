@@ -26,7 +26,7 @@ async function kvGet(key) {
 }
 
 async function kvSet(key, value) {
-    await fetch(`${UPSTASH_URL}/set/${key}`, {
+    const res = await fetch(`${UPSTASH_URL}/set/${key}`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${UPSTASH_TOKEN}`,
@@ -34,6 +34,9 @@ async function kvSet(key, value) {
         },
         body: JSON.stringify({ value })
     });
+    const data = await res.json();
+    if (data.error) throw new Error('Redis SET error: ' + data.error);
+    return data;
 }
 
 async function kvGetJson(key) {
