@@ -12,11 +12,12 @@ const REFERRAL_BONUS = 50;
 const CREATOR_TG_ID = 1243980540;
 const CREATOR_USERNAME = 'vansFenix';
 
-let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || '';
+const DEFAULT_BOT_USERNAME = 'wvfrobot';
+const DEFAULT_PROXY = 'https://shrill-bread-89de.nfajih.workers.dev';
+
+let TG_BOT_USERNAME = localStorage.getItem('vf_bot_username') || DEFAULT_BOT_USERNAME;
 let TG_BOT_PROXY = (localStorage.getItem('vf_bot_proxy') || '').replace(/^[a-zA-Z]+:\/\//, '');
 if (TG_BOT_PROXY) TG_BOT_PROXY = 'https://' + TG_BOT_PROXY;
-
-const DEFAULT_PROXY = 'https://shrill-bread-89de.nfajih.workers.dev';
 
 async function fetchBotConfig() {
     const proxy = TG_BOT_PROXY || DEFAULT_PROXY;
@@ -1203,11 +1204,7 @@ async function init() {
         showAuth();
     }
 
-    fetchBotConfig().then(() => {
-        if (!state.user) {
-            loadTelegramWidget();
-        }
-    });
+    fetchBotConfig();
 
     // Avatar upload
     document.getElementById('avatar-upload-input').addEventListener('change', function() {
